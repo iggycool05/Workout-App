@@ -51,12 +51,17 @@ ALTER TABLE workout_exercises ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exercise_sets     ENABLE ROW LEVEL SECURITY;
 
 -- workouts: users own their rows
+DROP POLICY IF EXISTS "workouts_select" ON workouts;
+DROP POLICY IF EXISTS "workouts_insert" ON workouts;
+DROP POLICY IF EXISTS "workouts_update" ON workouts;
+DROP POLICY IF EXISTS "workouts_delete" ON workouts;
 CREATE POLICY "workouts_select" ON workouts FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "workouts_insert" ON workouts FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "workouts_update" ON workouts FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "workouts_delete" ON workouts FOR DELETE USING (auth.uid() = user_id);
 
 -- workout_exercises: access through parent workout ownership
+DROP POLICY IF EXISTS "workout_exercises_all" ON workout_exercises;
 CREATE POLICY "workout_exercises_all" ON workout_exercises
   FOR ALL USING (
     EXISTS (
@@ -67,6 +72,7 @@ CREATE POLICY "workout_exercises_all" ON workout_exercises
   );
 
 -- exercise_sets: access through parent workout_exercise → workout ownership
+DROP POLICY IF EXISTS "exercise_sets_all" ON exercise_sets;
 CREATE POLICY "exercise_sets_all" ON exercise_sets
   FOR ALL USING (
     EXISTS (
