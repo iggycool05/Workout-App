@@ -2,10 +2,11 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { format } from 'date-fns'
-import { Plus, Trash2, Check, Search, ChevronDown, ChevronUp, X, Clock, Save, RotateCcw, Play, Pause } from 'lucide-react'
+import { Plus, Trash2, Check, Search, ChevronDown, ChevronUp, X, Clock, Save, RotateCcw, Play, Pause, LayoutTemplate } from 'lucide-react'
 import { exercises, CATEGORIES } from '../data/exercises'
 import { useWorkouts } from '../hooks/useWorkouts'
 import { useSettings } from '../hooks/useSettings'
+import { useTemplates } from '../hooks/useTemplates'
 import ExerciseImage from '../components/ExerciseImage'
 
 const DRAFT_KEY = 'fittrack-workout-draft'
@@ -351,6 +352,7 @@ export default function LogWorkout() {
 
   const { workouts, loading, addWorkout, updateWorkout, getWorkoutsByExercise } = useWorkouts()
   const { settings } = useSettings()
+  const { templates } = useTemplates()
 
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [notes, setNotes] = useState('')
@@ -398,6 +400,7 @@ export default function LogWorkout() {
   }
   const [entries, setEntries] = useState([])
   const [showPicker, setShowPicker] = useState(false)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [draftRestored, setDraftRestored] = useState(false)
@@ -458,6 +461,25 @@ export default function LogWorkout() {
     setDuration('')
     setNotes('')
     setEntries([])
+  }
+
+  const loadTemplate = (template) => {
+    setEntries(template.exercises.map((ex) => ({
+      id: uuidv4(),
+      exerciseId: ex.exerciseId,
+      exerciseName: ex.exerciseName,
+      category: ex.category,
+      sets: Array.from({ length: ex.setCount || 3 }, (_, i) => ({
+        id: uuidv4(),
+        index: i + 1,
+        weight: 0,
+        reps: 0,
+        time: 0,
+        completed: false,
+      })),
+    })))
+    setShowTemplatePicker(false)
+    setShowPicker(false)
   }
 
   const addExercise = (ex) => {
@@ -713,17 +735,59 @@ export default function LogWorkout() {
           onAdd={addExercise}
           existingIds={entries.map((e) => e.exerciseId)}
         />
+      ) : showTemplatePicker ? (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-white">Load Template</p>
+            <button onClick={() => setShowTemplatePicker(false)} className="text-gray-500 hover:text-white transition-colors">
+              <X size={15} />
+            </button>
+          </div>
+          {templates.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">
+              No templates yet — create one on the Templates page.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => loadTemplate(t)}
+                  className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-800 hover:border-emerald-500/30 hover:bg-emerald-500/5 text-left transition-colors"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-gray-200">{t.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{t.exercises.length} exercise{t.exercises.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <span className="text-xs text-emerald-400 font-medium">Load →</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
-        <button
-          onClick={() => setShowPicker(true)}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-dashed border-gray-800 text-gray-500 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors text-sm font-medium"
-        >
-          <Plus size={16} />
-          Add Exercise
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowPicker(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-dashed border-gray-800 text-gray-500 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors text-sm font-medium"
+          >
+            <Plus size={16} />
+            Add Exercise
+          </button>
+          {!isEditing && templates.length > 0 && (
+            <button
+              onClick={() => setShowTemplatePicker(true)}
+              title="Load template"
+              className="flex items-center gap-2 px-4 py-3.5 rounded-xl border-2 border-dashed border-gray-800 text-gray-500 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors text-sm font-medium"
+            >
+              <LayoutTemplate size={16} />
+              Template
+            </button>
+          )}
+        </div>
       )}
 
-      {entries.length === 0 && !showPicker && (
+      {entries.length === 0 && !showPicker && !showTemplatePicker && (
         <div className="text-center py-8 text-gray-600 text-sm">
           Add exercises above to start logging your workout.
         </div>
