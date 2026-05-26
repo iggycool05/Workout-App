@@ -10,6 +10,7 @@ import History from './pages/History'
 import Progress from './pages/Progress'
 import CustomCharts from './pages/CustomCharts'
 import Settings from './pages/Settings'
+import Templates from './pages/Templates'
 
 function SetupRequired() {
   return (
@@ -70,6 +71,7 @@ function AppRoutes() {
         <Route path="history" element={<History />} />
         <Route path="progress" element={<Progress />} />
         <Route path="charts" element={<CustomCharts />} />
+        <Route path="templates" element={<Templates />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

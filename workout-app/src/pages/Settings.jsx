@@ -1,9 +1,10 @@
 import { useSettings } from '../hooks/useSettings'
-import { Timer, RotateCcw } from 'lucide-react'
+import { Timer, RotateCcw, BellRing } from 'lucide-react'
 
 export default function Settings() {
   const { settings, updateSettings } = useSettings()
   const cd = settings.countdownSeconds
+  const rest = settings.restSeconds
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -12,13 +13,13 @@ export default function Settings() {
         <p className="text-gray-500 text-sm mt-0.5">Customize your workout experience</p>
       </div>
 
-      {/* Timer settings */}
+      {/* Countdown settings */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-6">
         <div className="flex items-center gap-2.5 pb-3 border-b border-gray-800">
           <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
             <Timer size={15} className="text-emerald-400" />
           </div>
-          <h2 className="text-sm font-semibold text-gray-200">Timer</h2>
+          <h2 className="text-sm font-semibold text-gray-200">Timer Countdown</h2>
         </div>
 
         <div>
@@ -70,9 +71,64 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Rest timer settings */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-6">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-gray-800">
+          <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+            <BellRing size={15} className="text-blue-400" />
+          </div>
+          <h2 className="text-sm font-semibold text-gray-200">Rest Timer</h2>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-medium text-gray-200">Rest between sets</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {rest === 0
+                  ? 'Rest timer is disabled'
+                  : rest < 60
+                  ? `${rest}s rest after each completed set`
+                  : `${Math.floor(rest / 60)}m ${rest % 60 > 0 ? `${rest % 60}s` : ''} rest after each completed set`}
+              </p>
+            </div>
+            <span className="text-2xl font-bold text-blue-400 w-16 text-right">
+              {rest === 0 ? 'Off' : rest < 60 ? `${rest}s` : `${Math.floor(rest / 60)}m${rest % 60 > 0 ? `${rest % 60}` : ''}`}
+            </span>
+          </div>
+
+          <input
+            type="range"
+            min={0}
+            max={300}
+            step={15}
+            value={rest}
+            onChange={(e) => updateSettings({ restSeconds: Number(e.target.value) })}
+            className="w-full h-2 rounded-full appearance-none accent-blue-500 bg-gray-700 cursor-pointer"
+          />
+          <div className="flex justify-between text-xs text-gray-600 mt-1.5">
+            <span>Off</span>
+            <span>30s</span>
+            <span>1m</span>
+            <span>1:30</span>
+            <span>2m</span>
+            <span>2:30</span>
+            <span>3m</span>
+            <span>3:30</span>
+            <span>4m</span>
+            <span>4:30</span>
+            <span>5m</span>
+          </div>
+        </div>
+
+        <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg p-3 text-xs text-gray-400">
+          A countdown timer will appear at the bottom of the screen after you complete a set. A beep sounds when rest is over.
+        </div>
+      </div>
+
       {/* Reset */}
       <button
-        onClick={() => updateSettings({ countdownSeconds: 3 })}
+        onClick={() => updateSettings({ countdownSeconds: 3, restSeconds: 90 })}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
       >
         <RotateCcw size={13} />

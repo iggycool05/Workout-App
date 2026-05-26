@@ -82,3 +82,28 @@ CREATE POLICY "exercise_sets_all" ON exercise_sets
         AND w.user_id = auth.uid()
     )
   );
+
+-- ============================================================
+-- WORKOUT TEMPLATES
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS workout_templates (
+  id         UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id    UUID        REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  name       TEXT        NOT NULL,
+  exercises  JSONB       NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS templates_user_id_idx ON workout_templates (user_id);
+
+ALTER TABLE workout_templates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "templates_select" ON workout_templates;
+DROP POLICY IF EXISTS "templates_insert" ON workout_templates;
+DROP POLICY IF EXISTS "templates_update" ON workout_templates;
+DROP POLICY IF EXISTS "templates_delete" ON workout_templates;
+CREATE POLICY "templates_select" ON workout_templates FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "templates_insert" ON workout_templates FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "templates_update" ON workout_templates FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "templates_delete" ON workout_templates FOR DELETE USING (auth.uid() = user_id);
