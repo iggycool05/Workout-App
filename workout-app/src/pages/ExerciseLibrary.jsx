@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Search, Filter } from 'lucide-react'
 import { exercises, CATEGORIES, EQUIPMENT } from '../data/exercises'
 import ExerciseImage from '../components/ExerciseImage'
+import MuscleMap from '../components/MuscleMap'
 
 export default function ExerciseLibrary() {
   const [search, setSearch] = useState('')
@@ -125,33 +126,50 @@ export default function ExerciseLibrary() {
 
       {/* Exercise detail panel */}
       {selected && (
-        <div className="fixed bottom-0 left-0 right-0 lg:right-auto lg:left-auto lg:bottom-6 lg:right-6 lg:w-96 bg-gray-900 border border-gray-700 rounded-t-2xl lg:rounded-2xl p-5 shadow-2xl z-40">
-          <div className="flex items-start gap-4">
-            <ExerciseImage category={selected.category} size="lg" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="font-bold text-white text-base leading-tight">{selected.name}</h3>
-                <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white text-lg leading-none">×</button>
+        <div className="fixed bottom-0 left-0 right-0 lg:left-auto lg:bottom-6 lg:right-6 lg:w-[420px] bg-gray-900 border border-gray-700 rounded-t-2xl lg:rounded-2xl shadow-2xl z-40 max-h-[85vh] overflow-y-auto">
+          <div className="p-5">
+            <div className="flex items-start gap-4">
+              <ExerciseImage category={selected.category} size="lg" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-bold text-white text-base leading-tight">{selected.name}</h3>
+                  <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white text-lg leading-none shrink-0">×</button>
+                </div>
+                <p className="text-xs mt-1 font-medium" style={{ color: CATEGORIES[selected.category]?.color }}>
+                  {CATEGORIES[selected.category]?.label}
+                </p>
+                <div className="flex gap-3 mt-2 text-xs text-gray-500">
+                  <span className="capitalize">{selected.equipment}</span>
+                  <span className={`capitalize font-medium ${
+                    selected.difficulty === 'beginner' ? 'text-emerald-400' :
+                    selected.difficulty === 'intermediate' ? 'text-yellow-400' : 'text-red-400'
+                  }`}>{selected.difficulty}</span>
+                </div>
               </div>
-              <p className="text-xs mt-1 font-medium" style={{ color: CATEGORIES[selected.category]?.color }}>
-                {CATEGORIES[selected.category]?.label}
-              </p>
             </div>
-          </div>
-          <div className="mt-4 space-y-3 text-sm">
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Primary Muscles</p>
-              <p className="text-gray-300">{selected.primaryMuscles.join(', ')}</p>
+
+            <div className="mt-4">
+              <MuscleMap
+                primaryMuscles={selected.primaryMuscles}
+                secondaryMuscles={selected.secondaryMuscles}
+              />
             </div>
-            {selected.secondaryMuscles.length > 0 && (
+
+            <div className="mt-4 space-y-3 text-sm">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Secondary</p>
-                <p className="text-gray-400">{selected.secondaryMuscles.join(', ')}</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Primary Muscles</p>
+                <p className="text-gray-300">{selected.primaryMuscles.join(', ')}</p>
               </div>
-            )}
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Instructions</p>
-              <p className="text-gray-400 text-xs leading-relaxed">{selected.description}</p>
+              {selected.secondaryMuscles.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Secondary</p>
+                  <p className="text-gray-400">{selected.secondaryMuscles.join(', ')}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Instructions</p>
+                <p className="text-gray-400 text-xs leading-relaxed">{selected.description}</p>
+              </div>
             </div>
           </div>
         </div>
