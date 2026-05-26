@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
-import { Trash2, ChevronDown, ChevronUp, Dumbbell, Clock, Layers } from 'lucide-react'
+import { Trash2, Pencil, ChevronDown, ChevronUp, Dumbbell, Clock, Layers } from 'lucide-react'
 import { useWorkouts } from '../hooks/useWorkouts'
 import { CATEGORIES } from '../data/exercises'
 import ExerciseImage from '../components/ExerciseImage'
 
-function WorkoutCard({ workout, onDelete }) {
+function WorkoutCard({ workout, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(false)
 
   const totalSets = workout.exercises.reduce((s, e) => s + e.sets.filter((st) => st.completed).length, 0)
@@ -35,7 +36,7 @@ function WorkoutCard({ workout, onDelete }) {
             ))}
           </div>
 
-          <div className="flex items-center gap-4 text-sm text-gray-400">
+          <div className="flex items-center gap-3 flex-wrap text-sm text-gray-400">
             <span className="flex items-center gap-1.5">
               <Dumbbell size={13} />
               {workout.exercises.length} exercises
@@ -69,6 +70,12 @@ function WorkoutCard({ workout, onDelete }) {
             className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white transition-colors"
           >
             {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+          </button>
+          <button
+            onClick={() => onEdit(workout.id)}
+            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+          >
+            <Pencil size={14} />
           </button>
           <button
             onClick={() => onDelete(workout.id)}
@@ -120,6 +127,7 @@ function WorkoutCard({ workout, onDelete }) {
 
 export default function History() {
   const { workouts, loading, deleteWorkout } = useWorkouts()
+  const navigate = useNavigate()
   const [filter, setFilter] = useState('all')
 
   if (loading) return (
@@ -173,7 +181,7 @@ export default function History() {
       ) : (
         <div className="space-y-3">
           {filtered.map((w) => (
-            <WorkoutCard key={w.id} workout={w} onDelete={deleteWorkout} />
+            <WorkoutCard key={w.id} workout={w} onDelete={deleteWorkout} onEdit={(id) => navigate(`/log/edit/${id}`)} />
           ))}
         </div>
       )}

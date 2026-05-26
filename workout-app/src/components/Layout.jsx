@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Dumbbell, PlusCircle, History, TrendingUp, BarChart3, Menu, X, LogOut } from 'lucide-react'
+import { LayoutDashboard, Dumbbell, PlusCircle, History, TrendingUp, BarChart3, Settings, Menu, X, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/history', icon: History, label: 'History' },
   { to: '/progress', icon: TrendingUp, label: 'Progress' },
   { to: '/charts', icon: BarChart3, label: 'Custom Charts' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
 export default function Layout() {

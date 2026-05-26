@@ -9,6 +9,7 @@ import LogWorkout from './pages/LogWorkout'
 import History from './pages/History'
 import Progress from './pages/Progress'
 import CustomCharts from './pages/CustomCharts'
+import Settings from './pages/Settings'
 
 function SetupRequired() {
   return (
@@ -65,9 +66,11 @@ function AppRoutes() {
         <Route index element={<Dashboard />} />
         <Route path="exercises" element={<ExerciseLibrary />} />
         <Route path="log" element={<LogWorkout />} />
+        <Route path="log/edit/:id" element={<LogWorkout />} />
         <Route path="history" element={<History />} />
         <Route path="progress" element={<Progress />} />
         <Route path="charts" element={<CustomCharts />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   )

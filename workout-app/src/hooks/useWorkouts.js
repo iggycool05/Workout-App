@@ -115,6 +115,49 @@ export function useWorkouts() {
     }
   }
 
+  const updateWorkout = async (id, workout) => {
+    if (!user) return { error: 'Not authenticated' }
+    try {
+      const { error: wErr } = await supabase
+        .from('workouts')
+        .update({ date: workout.date, duration: workout.duration || null, notes: workout.notes || null })
+        .eq('id', id)
+      if (wErr) throw wErr
+
+      // Delete existing exercises (cascade removes sets)
+      const { error: delErr } = await supabase.from('workout_exercises').delete().eq('workout_id', id)
+      if (delErr) throw delErr
+
+      // Re-insert exercises + sets
+      for (let i = 0; i < workout.exercises.length; i++) {
+        const ex = workout.exercises[i]
+        const { data: weRow, error: weErr } = await supabase
+          .from('workout_exercises')
+          .insert({ workout_id: id, exercise_id: ex.exerciseId, exercise_name: ex.exerciseName, category: ex.category, sort_order: i })
+          .select('id').single()
+        if (weErr) throw weErr
+
+        const setsToInsert = ex.sets.map((s, j) => ({
+          workout_exercise_id: weRow.id,
+          set_index: j + 1,
+          weight: s.weight || null,
+          reps: s.reps || null,
+          time_seconds: s.time || null,
+          completed: s.completed,
+        }))
+        if (setsToInsert.length > 0) {
+          const { error: sErr } = await supabase.from('exercise_sets').insert(setsToInsert)
+          if (sErr) throw sErr
+        }
+      }
+
+      await fetchWorkouts()
+      return { error: null }
+    } catch (err) {
+      return { error: err.message }
+    }
+  }
+
   const deleteWorkout = async (id) => {
     // Optimistically remove from local state, then delete from DB (cascade handles children)
     setWorkouts((prev) => prev.filter((w) => w.id !== id))
@@ -204,6 +247,7 @@ export function useWorkouts() {
     loading,
     error,
     addWorkout,
+    updateWorkout,
     deleteWorkout,
     getWorkoutsByExercise,
     getPersonalRecords,
