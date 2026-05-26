@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
-import { Trash2, Pencil, ChevronDown, ChevronUp, Dumbbell, Clock, Layers } from 'lucide-react'
+import { Trash2, Pencil, ChevronDown, ChevronUp, Dumbbell, Clock, Layers, CloudUpload } from 'lucide-react'
 import { useWorkouts } from '../hooks/useWorkouts'
 import { CATEGORIES } from '../data/exercises'
 import ExerciseImage from '../components/ExerciseImage'
@@ -65,24 +65,41 @@ function WorkoutCard({ workout, onDelete, onEdit }) {
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white transition-colors"
-          >
-            {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-          </button>
-          <button
-            onClick={() => onEdit(workout.id)}
-            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
-          >
-            <Pencil size={14} />
-          </button>
-          <button
-            onClick={() => onDelete(workout.id)}
-            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-          >
-            <Trash2 size={14} />
-          </button>
+          {workout.pending ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white transition-colors"
+              >
+                {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              </button>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-medium">
+                <CloudUpload size={12} />
+                Pending
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white transition-colors"
+              >
+                {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              </button>
+              <button
+                onClick={() => onEdit(workout.id)}
+                className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+              >
+                <Pencil size={14} />
+              </button>
+              <button
+                onClick={() => onDelete(workout.id)}
+                className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+              >
+                <Trash2 size={14} />
+              </button>
+            </>
+          )}
         </div>
       </div>
 

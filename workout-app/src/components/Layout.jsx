@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Dumbbell, PlusCircle, History, TrendingUp, BarChart3, Settings, Menu, X, LogOut, LayoutTemplate } from 'lucide-react'
+import { LayoutDashboard, Dumbbell, PlusCircle, History, TrendingUp, BarChart3, Settings, Menu, X, LogOut, LayoutTemplate, CloudUpload } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
@@ -14,9 +14,21 @@ const navItems = [
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
+const OFFLINE_QUEUE_KEY = 'fittrack-offline-queue'
+
 export default function Layout() {
   const [open, setOpen] = useState(false)
   const { user, signOut } = useAuth()
+  const [pendingCount, setPendingCount] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]').length }
+    catch { return 0 }
+  })
+
+  useEffect(() => {
+    const handler = (e) => setPendingCount(e.detail)
+    window.addEventListener('fittrack-queue-change', handler)
+    return () => window.removeEventListener('fittrack-queue-change', handler)
+  }, [])
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? 'FT'
 
@@ -102,10 +114,17 @@ export default function Layout() {
             <Menu size={22} />
           </button>
           <div className="flex-1" />
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            Connected
-          </div>
+          {pendingCount > 0 ? (
+            <div className="flex items-center gap-2 text-sm text-amber-400 animate-pulse">
+              <CloudUpload size={15} />
+              {pendingCount} pending sync
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              Connected
+            </div>
+          )}
         </header>
 
         <main className="flex-1 p-4 lg:p-6">

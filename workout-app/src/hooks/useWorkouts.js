@@ -3,6 +3,18 @@ import { subDays, parseISO, isAfter, format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
+const OFFLINE_QUEUE_KEY = 'fittrack-offline-queue'
+
+const readQueue = () => {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]') }
+  catch { return [] }
+}
+
+const writeQueue = (queue) => {
+  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue))
+  window.dispatchEvent(new CustomEvent('fittrack-queue-change', { detail: queue.length }))
+}
+
 // Transform Supabase nested row → the shape the UI expects
 const toWorkout = (row) => ({
   id: row.id,
@@ -35,6 +47,7 @@ export function useWorkouts() {
   const [workouts, setWorkouts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [pendingCount, setPendingCount] = useState(() => readQueue().length)
 
   const fetchWorkouts = useCallback(async () => {
     if (!user) {
@@ -61,7 +74,22 @@ export function useWorkouts() {
         .order('created_at', { ascending: false })
 
       if (err) throw err
-      setWorkouts((data ?? []).map(toWorkout))
+
+      const realWorkouts = (data ?? []).map(toWorkout)
+
+      // Merge offline-queued workouts into the list so they show in History
+      const queue = readQueue()
+      const pendingWorkouts = queue.map((w, i) => ({
+        id: `pending-${i}`,
+        date: w.date,
+        duration: w.duration,
+        notes: w.notes,
+        exercises: w.exercises,
+        pending: true,
+      }))
+
+      setPendingCount(queue.length)
+      setWorkouts([...pendingWorkouts, ...realWorkouts])
     } catch (err) {
       setError(err.message)
     } finally {
@@ -71,43 +99,99 @@ export function useWorkouts() {
 
   useEffect(() => { fetchWorkouts() }, [fetchWorkouts])
 
+  // ----- Internal: write a single workout to Supabase -----
+
+  const _insertToSupabase = async (workout) => {
+    const { data: wRow, error: wErr } = await supabase
+      .from('workouts')
+      .insert({ user_id: user.id, date: workout.date, duration: workout.duration || null, notes: workout.notes || null })
+      .select('id')
+      .single()
+    if (wErr) throw wErr
+
+    for (let i = 0; i < workout.exercises.length; i++) {
+      const ex = workout.exercises[i]
+      const { data: weRow, error: weErr } = await supabase
+        .from('workout_exercises')
+        .insert({ workout_id: wRow.id, exercise_id: ex.exerciseId, exercise_name: ex.exerciseName, category: ex.category, sort_order: i })
+        .select('id')
+        .single()
+      if (weErr) throw weErr
+
+      const setsToInsert = ex.sets.map((s, j) => ({
+        workout_exercise_id: weRow.id,
+        set_index: j + 1,
+        weight: s.weight || null,
+        reps: s.reps || null,
+        time_seconds: s.time || null,
+        completed: s.completed,
+      }))
+      if (setsToInsert.length > 0) {
+        const { error: sErr } = await supabase.from('exercise_sets').insert(setsToInsert)
+        if (sErr) throw sErr
+      }
+    }
+  }
+
+  // ----- Flush offline queue to Supabase -----
+
+  const flushOfflineQueue = useCallback(async () => {
+    if (!user || !navigator.onLine) return
+    const queue = readQueue()
+    if (queue.length === 0) return
+
+    const remaining = []
+    for (const workout of queue) {
+      try {
+        await _insertToSupabase(workout)
+      } catch {
+        remaining.push(workout)
+      }
+    }
+
+    writeQueue(remaining)
+    setPendingCount(remaining.length)
+    await fetchWorkouts()
+  }, [user, fetchWorkouts]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    // Auto-flush on mount if back online with pending items
+    if (navigator.onLine && readQueue().length > 0 && user) {
+      flushOfflineQueue()
+    }
+
+    window.addEventListener('online', flushOfflineQueue)
+    return () => window.removeEventListener('online', flushOfflineQueue)
+  }, [flushOfflineQueue])
+
   // ----- Mutations -----
 
   const addWorkout = async (workout) => {
     if (!user) return { error: 'Not authenticated' }
-    try {
-      // 1. Insert workout row
-      const { data: wRow, error: wErr } = await supabase
-        .from('workouts')
-        .insert({ user_id: user.id, date: workout.date, duration: workout.duration || null, notes: workout.notes || null })
-        .select('id')
-        .single()
-      if (wErr) throw wErr
 
-      // 2. Insert each exercise + its sets
-      for (let i = 0; i < workout.exercises.length; i++) {
-        const ex = workout.exercises[i]
-        const { data: weRow, error: weErr } = await supabase
-          .from('workout_exercises')
-          .insert({ workout_id: wRow.id, exercise_id: ex.exerciseId, exercise_name: ex.exerciseName, category: ex.category, sort_order: i })
-          .select('id')
-          .single()
-        if (weErr) throw weErr
-
-        const setsToInsert = ex.sets.map((s, j) => ({
-          workout_exercise_id: weRow.id,
-          set_index: j + 1,
-          weight: s.weight || null,
-          reps: s.reps || null,
-          time_seconds: s.time || null,
-          completed: s.completed,
-        }))
-        if (setsToInsert.length > 0) {
-          const { error: sErr } = await supabase.from('exercise_sets').insert(setsToInsert)
-          if (sErr) throw sErr
-        }
+    if (!navigator.onLine) {
+      try {
+        const queue = readQueue()
+        queue.push(workout)
+        writeQueue(queue)
+        setPendingCount(queue.length)
+        // Show it immediately in the list as pending
+        setWorkouts((prev) => [{
+          id: `pending-${Date.now()}`,
+          date: workout.date,
+          duration: workout.duration,
+          notes: workout.notes,
+          exercises: workout.exercises,
+          pending: true,
+        }, ...prev])
+        return { error: null }
+      } catch (err) {
+        return { error: 'Failed to save offline: ' + err.message }
       }
+    }
 
+    try {
+      await _insertToSupabase(workout)
       await fetchWorkouts()
       return { error: null }
     } catch (err) {
@@ -124,11 +208,9 @@ export function useWorkouts() {
         .eq('id', id)
       if (wErr) throw wErr
 
-      // Delete existing exercises (cascade removes sets)
       const { error: delErr } = await supabase.from('workout_exercises').delete().eq('workout_id', id)
       if (delErr) throw delErr
 
-      // Re-insert exercises + sets
       for (let i = 0; i < workout.exercises.length; i++) {
         const ex = workout.exercises[i]
         const { data: weRow, error: weErr } = await supabase
@@ -159,20 +241,19 @@ export function useWorkouts() {
   }
 
   const deleteWorkout = async (id) => {
-    // Optimistically remove from local state, then delete from DB (cascade handles children)
     setWorkouts((prev) => prev.filter((w) => w.id !== id))
     const { error: err } = await supabase.from('workouts').delete().eq('id', id)
     if (err) {
       console.error('Delete failed:', err.message)
-      await fetchWorkouts() // restore if delete failed
+      await fetchWorkouts()
     }
   }
 
-  // ----- Derived data (computed from in-memory workouts array) -----
+  // ----- Derived data -----
 
   const getWorkoutsByExercise = (exerciseId) =>
     workouts
-      .filter((w) => w.exercises.some((e) => e.exerciseId === exerciseId))
+      .filter((w) => !w.pending && w.exercises.some((e) => e.exerciseId === exerciseId))
       .map((w) => {
         const log = w.exercises.find((e) => e.exerciseId === exerciseId)
         const done = log.sets.filter((s) => s.completed)
@@ -189,7 +270,7 @@ export function useWorkouts() {
 
   const getPersonalRecords = () => {
     const records = {}
-    workouts.forEach((w) => {
+    workouts.filter((w) => !w.pending).forEach((w) => {
       w.exercises.forEach((e) => {
         e.sets.forEach((s) => {
           if (s.completed && s.weight) {
@@ -205,7 +286,7 @@ export function useWorkouts() {
 
   const getWeeklyStats = (days = 7) => {
     const cutoff = subDays(new Date(), days)
-    const recent = workouts.filter((w) => isAfter(parseISO(w.date), cutoff))
+    const recent = workouts.filter((w) => !w.pending && isAfter(parseISO(w.date), cutoff))
     const totalVolume = recent.reduce((sum, w) =>
       sum + w.exercises.reduce((s2, e) =>
         s2 + e.sets.filter((s) => s.completed).reduce((s3, s) => s3 + (s.reps || 0) * (s.weight || 0), 0), 0), 0)
@@ -218,7 +299,7 @@ export function useWorkouts() {
     for (let i = days - 1; i >= 0; i--) {
       const date = format(subDays(new Date(), i), 'yyyy-MM-dd')
       const vol = workouts
-        .filter((w) => w.date === date)
+        .filter((w) => !w.pending && w.date === date)
         .reduce((sum, w) =>
           sum + w.exercises.reduce((s2, e) =>
             s2 + e.sets.filter((s) => s.completed).reduce((s3, s) => s3 + (s.reps || 0) * (s.weight || 0), 0), 0), 0)
@@ -231,7 +312,7 @@ export function useWorkouts() {
     const cutoff = subDays(new Date(), days)
     const map = { chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0, core: 0, cardio: 0 }
     workouts
-      .filter((w) => isAfter(parseISO(w.date), cutoff))
+      .filter((w) => !w.pending && isAfter(parseISO(w.date), cutoff))
       .forEach((w) => w.exercises.forEach((e) => {
         if (map[e.category] !== undefined) map[e.category] += e.sets.filter((s) => s.completed).length
       }))
@@ -246,6 +327,7 @@ export function useWorkouts() {
     workouts,
     loading,
     error,
+    pendingCount,
     addWorkout,
     updateWorkout,
     deleteWorkout,
