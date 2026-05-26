@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 
 export function useTemplates() {
+  const { user } = useAuth()
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -19,7 +21,7 @@ export function useTemplates() {
   const addTemplate = async (name, exercises) => {
     const { data, error } = await supabase
       .from('workout_templates')
-      .insert({ name, exercises })
+      .insert({ user_id: user.id, name, exercises })
       .select()
       .single()
     if (!error && data) setTemplates((prev) => [data, ...prev])
