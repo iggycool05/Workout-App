@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#111827"/>
+  <g transform="translate(256,256)" stroke="#10b981" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- dumbbell bar -->
+    <line x1="-90" y1="0" x2="90" y2="0" stroke-width="28"/>
+    <!-- left collar -->
+    <rect x="-110" y="-30" width="36" height="60" rx="8" fill="#10b981" stroke="none"/>
+    <!-- right collar -->
+    <rect x="74" y="-30" width="36" height="60" rx="8" fill="#10b981" stroke="none"/>
+    <!-- left weight -->
+    <rect x="-148" y="-52" width="38" height="104" rx="10" fill="#10b981" stroke="none"/>
+    <!-- right weight -->
+    <rect x="110" y="-52" width="38" height="104" rx="10" fill="#10b981" stroke="none"/>
+  </g>
+</svg>
