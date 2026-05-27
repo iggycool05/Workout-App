@@ -2,16 +2,38 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import { format } from 'date-fns'
-import { Plus, Trash2, Check, Search, ChevronDown, ChevronUp, X, Clock, Save, RotateCcw, Play, Pause, LayoutTemplate } from 'lucide-react'
-import { exercises, CATEGORIES } from '../data/exercises'
+import { Plus, Trash2, Check, ChevronDown, ChevronUp, X, Save, RotateCcw, Play, Pause, LayoutTemplate, BellRing } from 'lucide-react'
+import { exercises } from '../data/exercises'
 import { useWorkouts } from '../hooks/useWorkouts'
 import { useSettings } from '../hooks/useSettings'
 import { useTemplates } from '../hooks/useTemplates'
 import ExerciseImage from '../components/ExerciseImage'
+import ExerciseGroupPicker from '../components/ExerciseGroupPicker'
 
 const DRAFT_KEY = 'fittrack-workout-draft'
 
 const fmtTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
+
+const playRestDoneTone = () => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+    if (!AudioContext) return
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = 880
+    gain.gain.setValueAtTime(0.001, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.38)
+  } catch {
+    // Audio is a convenience; browser autoplay rules may block it.
+  }
+}
 
 function SetRow({ set, onChange, onDelete, trackTime, countdownSeconds }) {
   // 'idle' | 'countdown' | 'running' | 'paused'
@@ -176,7 +198,16 @@ function SetRow({ set, onChange, onDelete, trackTime, countdownSeconds }) {
   )
 }
 
-function ExerciseBlock({ entry, onUpdateSets, onRemove, lastSets, countdownSeconds }) {
+function ExerciseBlock({
+  entry,
+  onUpdateEntry,
+  onUpdateSets,
+  onRemove,
+  lastSets,
+  countdownSeconds,
+  restTimerEnabled,
+  onSetCompleted,
+}) {
   const ex = exercises.find((e) => e.id === entry.exerciseId)
   const [collapsed, setCollapsed] = useState(false)
 
@@ -193,7 +224,9 @@ function ExerciseBlock({ entry, onUpdateSets, onRemove, lastSets, countdownSecon
   }
 
   const updateSet = (idx, updated) => {
+    const previous = entry.sets[idx]
     onUpdateSets(entry.sets.map((s, i) => (i === idx ? updated : s)))
+    if (!previous?.completed && updated.completed) onSetCompleted(entry)
   }
 
   const deleteSet = (idx) => {
@@ -231,6 +264,22 @@ function ExerciseBlock({ entry, onUpdateSets, onRemove, lastSets, countdownSecon
 
       {!collapsed && (
         <div className="px-3 sm:px-4 pb-4">
+          {restTimerEnabled && (
+            <label className="mb-3 flex items-center gap-2 rounded-lg bg-gray-800/50 border border-gray-800 px-2.5 py-2">
+              <BellRing size={13} className="text-blue-400 shrink-0" />
+              <span className="text-xs text-gray-500 shrink-0">Rest</span>
+              <input
+                type="number"
+                min={0}
+                step={15}
+                value={entry.restSeconds ?? 0}
+                onChange={(e) => onUpdateEntry({ restSeconds: Math.max(0, Number(e.target.value)) })}
+                className="min-w-0 flex-1 bg-transparent text-right text-xs font-semibold text-gray-200 focus:outline-none"
+              />
+              <span className="text-xs text-gray-500">sec</span>
+            </label>
+          )}
+
           {lastSets && lastSets.length > 0 && (
             <div className="mb-3 px-2 py-1.5 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Previous session</p>
@@ -280,71 +329,6 @@ function ExerciseBlock({ entry, onUpdateSets, onRemove, lastSets, countdownSecon
   )
 }
 
-function ExercisePicker({ onAdd, existingIds }) {
-  const [search, setSearch] = useState('')
-  const [category, setCategory] = useState('all')
-
-  const filtered = useMemo(() => exercises.filter((e) => {
-    const matchSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
-      e.primaryMuscles.some((m) => m.toLowerCase().includes(search.toLowerCase()))
-    const matchCat = category === 'all' || e.category === category
-    return matchSearch && matchCat
-  }), [search, category])
-
-  return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-        <input
-          type="text"
-          placeholder="Search exercises…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-4 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-emerald-500/50"
-          autoFocus
-        />
-      </div>
-      <div className="flex gap-1.5 flex-wrap">
-        {['all', ...Object.keys(CATEGORIES)].map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setCategory(cat)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
-              category === cat
-                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
-                : 'text-gray-500 border-gray-800 hover:text-gray-300'
-            }`}
-          >
-            {cat === 'all' ? 'All' : CATEGORIES[cat].label}
-          </button>
-        ))}
-      </div>
-      <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
-        {filtered.map((ex) => {
-          const already = existingIds.includes(ex.id)
-          return (
-            <button
-              key={ex.id}
-              onClick={() => !already && onAdd(ex)}
-              disabled={already}
-              className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-colors ${
-                already ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-800 cursor-pointer'
-              }`}
-            >
-              <ExerciseImage category={ex.category} size="sm" className="w-10 h-10 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-200 truncate">{ex.name}</p>
-                <p className="text-xs text-gray-500">{ex.primaryMuscles.join(', ')}</p>
-              </div>
-              {already && <span className="text-xs text-gray-600 shrink-0">Added</span>}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 export default function LogWorkout() {
   const navigate = useNavigate()
   const { id: editId } = useParams()
@@ -357,6 +341,7 @@ export default function LogWorkout() {
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [notes, setNotes] = useState('')
   const [duration, setDuration] = useState('')
+  const [activeRest, setActiveRest] = useState(null)
 
   // Workout duration timer
   const [durState, setDurState] = useState('idle') // idle|countdown|running|paused
@@ -379,6 +364,23 @@ export default function LogWorkout() {
     }, 1000)
     return () => clearInterval(interval)
   }, [durState]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!activeRest) return
+
+    const timer = setTimeout(() => {
+      setActiveRest((current) => {
+        if (!current) return null
+        if (current.remaining <= 1) {
+          playRestDoneTone()
+          return null
+        }
+        return { ...current, remaining: current.remaining - 1 }
+      })
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [activeRest])
 
   const startDurTimer = () => {
     if (settings.countdownSeconds > 0) { setDurCountdown(settings.countdownSeconds); setDurState('countdown') }
@@ -423,10 +425,11 @@ export default function LogWorkout() {
         exerciseId: ex.exerciseId,
         exerciseName: ex.exerciseName,
         category: ex.category,
+        restSeconds: ex.restSeconds ?? settings.restSeconds,
         sets: ex.sets.map((s) => ({ id: s.id || uuidv4(), index: s.index, weight: s.weight, reps: s.reps, time: s.time, completed: s.completed })),
       }))
     )
-  }, [editWorkout, isEditing])
+  }, [editWorkout, isEditing, settings.restSeconds])
 
   // Load draft from localStorage on mount (new workouts only)
   useEffect(() => {
@@ -439,14 +442,19 @@ export default function LogWorkout() {
             setDate(draft.date || format(new Date(), 'yyyy-MM-dd'))
             setDuration(draft.duration || '')
             setNotes(draft.notes || '')
-            setEntries(draft.entries)
+            setEntries(draft.entries.map((entry) => ({
+              ...entry,
+              restSeconds: entry.restSeconds ?? settings.restSeconds,
+            })))
             setDraftRestored(true)
           }
         }
-      } catch {}
+      } catch {
+        localStorage.removeItem(DRAFT_KEY)
+      }
     }
     setInitialized(true)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settings.restSeconds]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-save draft to localStorage on every change (new workouts only)
   useEffect(() => {
@@ -469,6 +477,7 @@ export default function LogWorkout() {
       exerciseId: ex.exerciseId,
       exerciseName: ex.exerciseName,
       category: ex.category,
+      restSeconds: ex.restSeconds ?? settings.restSeconds,
       sets: Array.from({ length: ex.setCount || 3 }, (_, i) => ({
         id: uuidv4(),
         index: i + 1,
@@ -488,13 +497,35 @@ export default function LogWorkout() {
       exerciseId: ex.id,
       exerciseName: ex.name,
       category: ex.category,
+      restSeconds: settings.restSeconds,
       sets: [{ id: uuidv4(), index: 1, weight: 0, reps: 0, time: 0, completed: false }],
     }])
     setShowPicker(false)
   }
 
   const removeExercise = (entryId) => setEntries((prev) => prev.filter((e) => e.id !== entryId))
+  const updateEntry = (entryId, updates) => setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, ...updates } : e)))
   const updateSets = (entryId, sets) => setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, sets } : e)))
+
+  const startRestForEntry = (entry) => {
+    if (!settings.restTimerEnabled) return
+    const seconds = entry.restSeconds ?? settings.restSeconds
+    if (!seconds || seconds <= 0) return
+    setActiveRest({
+      entryId: entry.id,
+      exerciseName: entry.exerciseName,
+      total: seconds,
+      remaining: seconds,
+    })
+  }
+
+  const adjustActiveRest = (delta) => {
+    setActiveRest((current) => {
+      if (!current) return null
+      const nextRemaining = Math.max(0, current.remaining + delta)
+      return { ...current, remaining: nextRemaining, total: Math.max(current.total, nextRemaining) }
+    })
+  }
 
   const getLastSets = useCallback((exerciseId) => {
     const history = getWorkoutsByExercise(exerciseId)
@@ -514,6 +545,7 @@ export default function LogWorkout() {
         exerciseId: e.exerciseId,
         exerciseName: e.exerciseName,
         category: e.category,
+        restSeconds: e.restSeconds,
         sets: e.sets,
       })),
     }
@@ -595,6 +627,51 @@ export default function LogWorkout() {
       {saveError && (
         <div className="bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3 text-sm text-red-400">
           Failed to save: {saveError}
+        </div>
+      )}
+
+      {activeRest && (
+        <div className="fixed left-4 right-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl border border-blue-500/30 bg-gray-950/95 p-4 shadow-2xl backdrop-blur">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300">
+              <BellRing size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-blue-300">
+                Rest timer
+              </p>
+              <p className="truncate text-sm text-gray-300">{activeRest.exerciseName}</p>
+            </div>
+            <div className="text-2xl font-bold tabular-nums text-white">{fmtTime(activeRest.remaining)}</div>
+          </div>
+
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-800">
+            <div
+              className="h-full rounded-full bg-blue-400 transition-all"
+              style={{ width: `${Math.max(0, Math.min(100, (activeRest.remaining / activeRest.total) * 100))}%` }}
+            />
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <button
+              onClick={() => adjustActiveRest(-15)}
+              className="rounded-lg border border-gray-800 py-2 text-xs font-medium text-gray-400 hover:border-gray-700 hover:text-gray-200"
+            >
+              -15s
+            </button>
+            <button
+              onClick={() => setActiveRest(null)}
+              className="rounded-lg border border-blue-500/30 bg-blue-500/10 py-2 text-xs font-semibold text-blue-300 hover:bg-blue-500/20"
+            >
+              Skip
+            </button>
+            <button
+              onClick={() => adjustActiveRest(15)}
+              className="rounded-lg border border-gray-800 py-2 text-xs font-medium text-gray-400 hover:border-gray-700 hover:text-gray-200"
+            >
+              +15s
+            </button>
+          </div>
         </div>
       )}
 
@@ -721,19 +798,23 @@ export default function LogWorkout() {
           <ExerciseBlock
             key={entry.id}
             entry={entry}
+            onUpdateEntry={(updates) => updateEntry(entry.id, updates)}
             onUpdateSets={(sets) => updateSets(entry.id, sets)}
             onRemove={() => removeExercise(entry.id)}
             lastSets={getLastSets(entry.exerciseId)}
             countdownSeconds={settings.countdownSeconds}
+            restTimerEnabled={settings.restTimerEnabled}
+            onSetCompleted={startRestForEntry}
           />
         ))}
       </div>
 
       {/* Add exercise */}
       {showPicker ? (
-        <ExercisePicker
+        <ExerciseGroupPicker
           onAdd={addExercise}
           existingIds={entries.map((e) => e.exerciseId)}
+          onClose={() => setShowPicker(false)}
         />
       ) : showTemplatePicker ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">

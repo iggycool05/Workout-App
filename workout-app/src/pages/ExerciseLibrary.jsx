@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
-import { Search, Filter } from 'lucide-react'
-import { exercises, CATEGORIES, EQUIPMENT } from '../data/exercises'
+import { Search } from 'lucide-react'
+import { exercises, CATEGORIES, EQUIPMENT, groupExercises } from '../data/exercises'
 import ExerciseImage from '../components/ExerciseImage'
 import MuscleMap from '../components/MuscleMap'
 
@@ -9,6 +9,7 @@ export default function ExerciseLibrary() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [activeEquipment, setActiveEquipment] = useState('all')
   const [selected, setSelected] = useState(null)
+  const [openGroup, setOpenGroup] = useState(null)
 
   const filtered = useMemo(() => {
     return exercises.filter((e) => {
@@ -19,6 +20,18 @@ export default function ExerciseLibrary() {
       return matchSearch && matchCat && matchEq
     })
   }, [search, activeCategory, activeEquipment])
+
+  const grouped = useMemo(() => groupExercises(filtered), [filtered])
+
+  const handleGroupClick = (group) => {
+    if (group.exercises.length === 1) {
+      setSelected(selected?.id === group.exercises[0].id ? null : group.exercises[0])
+      setOpenGroup(null)
+      return
+    }
+
+    setOpenGroup(openGroup === group.key ? null : group.key)
+  }
 
   return (
     <div className="space-y-5">
@@ -84,40 +97,71 @@ export default function ExerciseLibrary() {
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filtered.map((ex) => (
-          <button
-            key={ex.id}
-            onClick={() => setSelected(selected?.id === ex.id ? null : ex)}
-            className={`bg-gray-900 border rounded-xl p-4 text-left transition-all hover:border-gray-700 ${
-              selected?.id === ex.id ? 'border-emerald-500/50 ring-1 ring-emerald-500/20' : 'border-gray-800'
-            }`}
-          >
-            <ExerciseImage category={ex.category} size="md" className="mb-3 w-full h-28" />
-            <div className="space-y-1.5">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="text-sm font-semibold text-gray-100 leading-tight">{ex.name}</h3>
-                <span
-                  className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
-                  style={{ backgroundColor: CATEGORIES[ex.category]?.color + '20', color: CATEGORIES[ex.category]?.color }}
-                >
-                  {CATEGORIES[ex.category]?.label}
-                </span>
-              </div>
-              <p className="text-xs text-gray-500">{ex.primaryMuscles.join(', ')}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 capitalize">{ex.equipment}</span>
-                <span className={`text-xs px-1.5 py-0.5 rounded capitalize font-medium ${
-                  ex.difficulty === 'beginner' ? 'text-emerald-400 bg-emerald-500/10' :
-                  ex.difficulty === 'intermediate' ? 'text-yellow-400 bg-yellow-500/10' :
-                  'text-red-400 bg-red-500/10'
-                }`}>{ex.difficulty}</span>
-              </div>
+        {grouped.map((group) => {
+          const firstExercise = group.exercises[0]
+          const selectedInGroup = group.exercises.some((ex) => ex.id === selected?.id)
+          const isOpen = openGroup === group.key
+
+          return (
+            <div
+              key={group.key}
+              className={`bg-gray-900 border rounded-xl p-4 text-left transition-all ${
+                selectedInGroup || isOpen ? 'border-emerald-500/50 ring-1 ring-emerald-500/20' : 'border-gray-800 hover:border-gray-700'
+              }`}
+            >
+              <button onClick={() => handleGroupClick(group)} className="w-full text-left">
+                <ExerciseImage category={group.category} size="md" className="mb-3 w-full h-28" />
+                <div className="space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-gray-100 leading-tight">{group.family}</h3>
+                    <span
+                      className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
+                      style={{ backgroundColor: CATEGORIES[group.category]?.color + '20', color: CATEGORIES[group.category]?.color }}
+                    >
+                      {CATEGORIES[group.category]?.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">{group.primaryMuscles.join(', ')}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">{group.exercises.length} variant{group.exercises.length !== 1 ? 's' : ''}</span>
+                    <span className="text-xs text-emerald-400 font-medium">
+                      {group.exercises.length === 1 ? firstExercise.equipment : 'Choose'}
+                    </span>
+                  </div>
+                </div>
+              </button>
+
+              {isOpen && (
+                <div className="mt-3 space-y-1">
+                  {group.exercises.map((ex) => (
+                    <button
+                      key={ex.id}
+                      onClick={() => setSelected(selected?.id === ex.id ? null : ex)}
+                      className={`w-full flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
+                        selected?.id === ex.id
+                          ? 'border-emerald-500/40 bg-emerald-500/10'
+                          : 'border-gray-800 hover:border-gray-700'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-200 truncate">{ex.name}</p>
+                        <p className="text-xs text-gray-500 capitalize">{ex.equipment}</p>
+                      </div>
+                      <span className={`text-xs px-1.5 py-0.5 rounded capitalize font-medium shrink-0 ${
+                        ex.difficulty === 'beginner' ? 'text-emerald-400 bg-emerald-500/10' :
+                        ex.difficulty === 'intermediate' ? 'text-yellow-400 bg-yellow-500/10' :
+                        'text-red-400 bg-red-500/10'
+                      }`}>{ex.difficulty}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </button>
-        ))}
+          )
+        })}
       </div>
 
-      {filtered.length === 0 && (
+      {grouped.length === 0 && (
         <div className="text-center py-16 text-gray-500">
           <Search size={32} className="mx-auto mb-3 opacity-40" />
           <p>No exercises match your filters.</p>

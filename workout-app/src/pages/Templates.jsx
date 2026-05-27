@@ -1,77 +1,9 @@
-import { useState, useMemo } from 'react'
-import { Plus, Trash2, Search, X, LayoutTemplate, ChevronDown, ChevronUp } from 'lucide-react'
-import { exercises, CATEGORIES } from '../data/exercises'
+import { useState } from 'react'
+import { Plus, Trash2, X, LayoutTemplate, ChevronDown, ChevronUp } from 'lucide-react'
+import { exercises } from '../data/exercises'
 import { useTemplates } from '../hooks/useTemplates'
 import ExerciseImage from '../components/ExerciseImage'
-
-function ExercisePicker({ onAdd, existingIds, onClose }) {
-  const [search, setSearch] = useState('')
-  const [category, setCategory] = useState('all')
-
-  const filtered = useMemo(() => exercises.filter((e) => {
-    const matchSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
-      e.primaryMuscles.some((m) => m.toLowerCase().includes(search.toLowerCase()))
-    const matchCat = category === 'all' || e.category === category
-    return matchSearch && matchCat
-  }), [search, category])
-
-  return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-white">Add Exercise</p>
-        <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors"><X size={15} /></button>
-      </div>
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-        <input
-          type="text"
-          placeholder="Search exercises…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-8 pr-4 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500/50"
-          autoFocus
-        />
-      </div>
-      <div className="flex gap-1.5 flex-wrap">
-        {['all', ...Object.keys(CATEGORIES)].map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setCategory(cat)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
-              category === cat
-                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
-                : 'text-gray-500 border-gray-600 hover:text-gray-300'
-            }`}
-          >
-            {cat === 'all' ? 'All' : CATEGORIES[cat].label}
-          </button>
-        ))}
-      </div>
-      <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
-        {filtered.map((ex) => {
-          const already = existingIds.includes(ex.id)
-          return (
-            <button
-              key={ex.id}
-              onClick={() => !already && onAdd(ex)}
-              disabled={already}
-              className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-colors ${
-                already ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-700 cursor-pointer'
-              }`}
-            >
-              <ExerciseImage category={ex.category} size="sm" className="w-8 h-8 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-200 truncate">{ex.name}</p>
-                <p className="text-xs text-gray-500">{ex.primaryMuscles.join(', ')}</p>
-              </div>
-              {already && <span className="text-xs text-gray-600 shrink-0">Added</span>}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
+import ExerciseGroupPicker from '../components/ExerciseGroupPicker'
 
 function TemplateCard({ template, onDelete }) {
   const [expanded, setExpanded] = useState(false)
@@ -201,10 +133,12 @@ function CreateTemplateForm({ onSave, onCancel }) {
       )}
 
       {showPicker ? (
-        <ExercisePicker
+        <ExerciseGroupPicker
           onAdd={addExercise}
           existingIds={templateExercises.map((e) => e.exerciseId)}
           onClose={() => setShowPicker(false)}
+          compact
+          className="bg-gray-800 border border-gray-700"
         />
       ) : (
         <button

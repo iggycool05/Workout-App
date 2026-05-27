@@ -5,6 +5,7 @@ export default function Settings() {
   const { settings, updateSettings } = useSettings()
   const cd = settings.countdownSeconds
   const rest = settings.restSeconds
+  const restEnabled = settings.restTimerEnabled
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -85,7 +86,7 @@ export default function Settings() {
             <div>
               <p className="text-sm font-medium text-gray-200">Rest between sets</p>
               <p className="text-xs text-gray-500 mt-0.5">
-                {rest === 0
+                {!restEnabled || rest === 0
                   ? 'Rest timer is disabled'
                   : rest < 60
                   ? `${rest}s rest after each completed set`
@@ -93,9 +94,22 @@ export default function Settings() {
               </p>
             </div>
             <span className="text-2xl font-bold text-blue-400 w-16 text-right">
-              {rest === 0 ? 'Off' : rest < 60 ? `${rest}s` : `${Math.floor(rest / 60)}m${rest % 60 > 0 ? `${rest % 60}` : ''}`}
+              {!restEnabled || rest === 0 ? 'Off' : rest < 60 ? `${rest}s` : `${Math.floor(rest / 60)}m${rest % 60 > 0 ? `${rest % 60}` : ''}`}
             </span>
           </div>
+
+          <label className="flex items-center justify-between gap-3 mb-4 rounded-lg border border-gray-800 bg-gray-800/40 px-3 py-2.5">
+            <span>
+              <span className="block text-sm font-medium text-gray-200">Enable rest timer</span>
+              <span className="block text-xs text-gray-500">Start a countdown after completed sets</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={restEnabled}
+              onChange={(e) => updateSettings({ restTimerEnabled: e.target.checked })}
+              className="h-5 w-5 accent-blue-500"
+            />
+          </label>
 
           <input
             type="range"
@@ -104,6 +118,7 @@ export default function Settings() {
             step={15}
             value={rest}
             onChange={(e) => updateSettings({ restSeconds: Number(e.target.value) })}
+            disabled={!restEnabled}
             className="w-full h-2 rounded-full appearance-none accent-blue-500 bg-gray-700 cursor-pointer"
           />
           <div className="flex justify-between text-xs text-gray-600 mt-1.5">
@@ -128,7 +143,7 @@ export default function Settings() {
 
       {/* Reset */}
       <button
-        onClick={() => updateSettings({ countdownSeconds: 3, restSeconds: 90 })}
+        onClick={() => updateSettings({ countdownSeconds: 3, restTimerEnabled: true, restSeconds: 90 })}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
       >
         <RotateCcw size={13} />

@@ -1,44 +1,83 @@
-import { useState } from 'react'
+import bodyImage from '../assets/body.png'
 
 const MUSCLE_MAP = {
-  'Chest':                ['chest-l', 'chest-r'],
-  'Upper Chest':          ['chest-l', 'chest-r'],
-  'Triceps':              ['tricep-l', 'tricep-r'],
-  'Shoulders':            ['front-delt-l', 'front-delt-r', 'rear-delt-l', 'rear-delt-r'],
-  'Front Delts':          ['front-delt-l', 'front-delt-r'],
-  'Side Delts':           ['front-delt-l', 'front-delt-r'],
-  'Rear Delts':           ['rear-delt-l', 'rear-delt-r'],
-  'Rotator Cuff':         ['rear-delt-l', 'rear-delt-r'],
-  'Biceps':               ['bicep-l', 'bicep-r'],
-  'Brachialis':           ['bicep-l', 'bicep-r'],
-  'Forearms':             ['forearm-l', 'forearm-r'],
-  'Grip':                 ['forearm-l', 'forearm-r'],
-  'Arms':                 ['bicep-l', 'bicep-r', 'tricep-l', 'tricep-r'],
-  'Abs':                  ['abs'],
-  'Core':                 ['abs', 'oblique-l', 'oblique-r'],
-  'Obliques':             ['oblique-l', 'oblique-r'],
+  'Chest': ['chest-l', 'chest-r'],
+  'Upper Chest': ['chest-l', 'chest-r'],
+  'Triceps': ['tricep-l', 'tricep-r'],
+  'Shoulders': ['front-delt-l', 'front-delt-r', 'rear-delt-l', 'rear-delt-r'],
+  'Front Delts': ['front-delt-l', 'front-delt-r'],
+  'Side Delts': ['front-delt-l', 'front-delt-r'],
+  'Rear Delts': ['rear-delt-l', 'rear-delt-r'],
+  'Rotator Cuff': ['rear-delt-l', 'rear-delt-r'],
+  'Biceps': ['bicep-l', 'bicep-r'],
+  'Brachialis': ['bicep-l', 'bicep-r'],
+  'Forearms': ['forearm-l', 'forearm-r'],
+  'Grip': ['forearm-l', 'forearm-r'],
+  'Arms': ['bicep-l', 'bicep-r', 'tricep-l', 'tricep-r'],
+  'Abs': ['abs'],
+  'Core': ['abs', 'oblique-l', 'oblique-r'],
+  'Obliques': ['oblique-l', 'oblique-r'],
   'Transverse Abdominis': ['abs'],
-  'Back':                 ['upper-back', 'lat-l', 'lat-r'],
-  'Upper Back':           ['upper-back'],
-  'Mid Back':             ['upper-back'],
-  'Rhomboids':            ['upper-back'],
-  'Lats':                 ['lat-l', 'lat-r'],
-  'Traps':                ['traps'],
-  'Lower Back':           ['lower-back'],
-  'Quadratus Lumborum':   ['lower-back'],
-  'Glutes':               ['glute-l', 'glute-r'],
-  'Outer Glutes':         ['abductor-l', 'abductor-r'],
-  'Hamstrings':           ['ham-l', 'ham-r'],
-  'Quads':                ['quad-l', 'quad-r'],
-  'Calves':               ['calf-l', 'calf-r'],
-  'Hip Flexors':          ['hip-flex-l', 'hip-flex-r'],
-  'Adductors':            ['adductor-l', 'adductor-r'],
-  'Inner Thighs':         ['adductor-l', 'adductor-r'],
-  'Abductors':            ['abductor-l', 'abductor-r'],
-  'Legs':                 ['quad-l', 'quad-r', 'ham-l', 'ham-r'],
-  'Full Body':            ['chest-l', 'chest-r', 'abs', 'quad-l', 'quad-r', 'ham-l', 'ham-r'],
-  'Cardiovascular':       ['chest-l', 'chest-r', 'quad-l', 'quad-r', 'ham-l', 'ham-r', 'calf-l', 'calf-r'],
+  'Back': ['upper-back', 'lat-l', 'lat-r'],
+  'Upper Back': ['upper-back'],
+  'Mid Back': ['upper-back'],
+  'Rhomboids': ['upper-back'],
+  'Lats': ['lat-l', 'lat-r'],
+  'Traps': ['traps'],
+  'Lower Back': ['lower-back'],
+  'Quadratus Lumborum': ['lower-back'],
+  'Glutes': ['glute-l', 'glute-r'],
+  'Outer Glutes': ['abductor-l', 'abductor-r'],
+  'Hamstrings': ['ham-l', 'ham-r'],
+  'Quads': ['quad-l', 'quad-r'],
+  'Calves': ['calf-l', 'calf-r'],
+  'Hip Flexors': ['hip-flex-l', 'hip-flex-r'],
+  'Adductors': ['adductor-l', 'adductor-r'],
+  'Inner Thighs': ['adductor-l', 'adductor-r'],
+  'Abductors': ['abductor-l', 'abductor-r'],
+  'Legs': ['quad-l', 'quad-r', 'ham-l', 'ham-r'],
+  'Full Body': ['chest-l', 'chest-r', 'abs', 'quad-l', 'quad-r', 'ham-l', 'ham-r'],
+  'Cardiovascular': ['chest-l', 'chest-r', 'quad-l', 'quad-r', 'ham-l', 'ham-r', 'calf-l', 'calf-r'],
 }
+
+const REGIONS = [
+  { id: 'front-delt-l', label: 'Left front deltoid', points: '116,216 125,189 145,179 160,179 163,181 139,205' },
+  { id: 'front-delt-r', label: 'Right front deltoid', points: '228,179 243,179 263,189 273,216 251,207 224,180' },
+  { id: 'chest-l', label: 'Left chest', points: '159,186 176,180 180,180 192,186 192,216 184,226 168,232 149,227 133,213' },
+  { id: 'chest-r', label: 'Right chest', points: '196,186 208,180 211,180 229,186 255,213 236,229 225,232 207,228 196,215' },
+  { id: 'bicep-l', label: 'Left biceps', points: '124,216 131,216 137,221 137,234 109,266 98,262 100,241 108,225' },
+  { id: 'bicep-r', label: 'Right biceps', points: '264,216 276,221 287,238 290,261 285,266 273,263 251,235 250,224 256,216' },
+  { id: 'forearm-l', label: 'Left forearm', points: '95,252 96,264 110,269 93,297 69,320 64,320 61,313 74,281' },
+  { id: 'forearm-r', label: 'Right forearm', points: '294,252 313,279 327,313 324,320 318,320 294,296 278,270 292,264' },
+  { id: 'oblique-l', label: 'Left obliques', points: '140,221 169,250 165,273 167,295 163,305 155,311 150,310 154,277 141,246' },
+  { id: 'oblique-r', label: 'Right obliques', points: '248,221 248,242 234,276 237,311 233,311 225,305 221,295 223,273 219,250' },
+  { id: 'abs', label: 'Abdominals', points: '173,230 194,222 216,231 223,291 211,330 194,351 177,329 166,291' },
+  { id: 'hip-flex-l', label: 'Left hip flexor', points: '145,309 166,329 181,366 160,356 142,338' },
+  { id: 'hip-flex-r', label: 'Right hip flexor', points: '244,309 222,329 207,366 229,356 247,338' },
+  { id: 'adductor-l', label: 'Left adductors', points: '170,356 193,382 190,458 177,447 163,398' },
+  { id: 'adductor-r', label: 'Right adductors', points: '219,356 197,382 200,458 213,447 227,398' },
+  { id: 'quad-l', label: 'Left quadriceps', points: '150,316 158,332 168,396 179,415 176,444 165,461 159,460 154,449 144,447 139,427 140,364' },
+  { id: 'quad-r', label: 'Right quadriceps', points: '238,316 248,365 249,427 244,447 234,449 225,462 214,450 209,415 220,396 229,336' },
+  { id: 'rear-delt-l', label: 'Left rear deltoid', points: '466,209 472,192 496,178 503,178 513,184 505,192 484,206' },
+  { id: 'rear-delt-r', label: 'Right rear deltoid', points: '577,184 587,178 595,178 616,190 625,209 603,205 585,192' },
+  { id: 'traps', label: 'Trapezius', points: '520,191 534,187 555,187 570,190 546,244' },
+  { id: 'upper-back', label: 'Upper back', points: '514,188 577,188 592,225 548,316 500,225' },
+  { id: 'lat-l', label: 'Left lat', points: '486,209 514,187 536,232 536,249 521,282 520,304 500,318 502,269 488,234' },
+  { id: 'lat-r', label: 'Right lat', points: '555,229 575,187 576,187 604,208 602,235 587,275 591,318 570,304 569,282 553,242' },
+  { id: 'lower-back', label: 'Lower back', points: '520,304 545,318 569,304 581,359 547,382 511,360' },
+  { id: 'tricep-l', label: 'Left triceps', points: '483,209 485,232 466,258 457,264 454,254 443,253 445,243 454,224 464,213' },
+  { id: 'tricep-r', label: 'Right triceps', points: '609,209 626,213 636,224 645,243 647,253 636,254 634,264 622,256 604,230 607,209' },
+  { id: 'forearm-l', label: 'Left rear forearm', points: '440,254 451,255 452,264 460,266 418,323 410,325 407,318 418,286' },
+  { id: 'forearm-r', label: 'Right rear forearm', points: '650,254 668,277 683,318 680,325 672,323 630,266 638,264 639,255' },
+  { id: 'glute-l', label: 'Left glute', points: '532,308 543,320 543,358 534,366 514,364 502,350 509,318 522,308' },
+  { id: 'glute-r', label: 'Right glute', points: '569,308 576,311 582,320 588,349 581,361 568,366 552,365 547,358 547,320 559,308' },
+  { id: 'ham-l', label: 'Left hamstring', points: '507,315 499,342 500,353 510,365 531,370 537,394 525,452 516,463 512,457 498,456 494,451 487,415 490,361 497,326' },
+  { id: 'ham-r', label: 'Right hamstring', points: '582,314 592,324 596,341 603,382 603,415 595,453 572,462 565,451 553,394 559,370 580,365 590,354 590,337' },
+  { id: 'abductor-l', label: 'Left hip abductor', points: '487,332 499,349 493,452 481,433 474,385' },
+  { id: 'abductor-r', label: 'Right hip abductor', points: '604,332 591,349 598,452 610,433 617,385' },
+  { id: 'calf-l', label: 'Left calf', points: '489,481 495,487 510,488 515,493 517,521 510,533 486,531 483,526 481,498' },
+  { id: 'calf-r', label: 'Right calf', points: '603,481 609,501 607,526 604,531 584,533 578,532 573,522 575,492 580,488 595,487' },
+]
 
 function resolveIds(muscles = []) {
   const ids = new Set()
@@ -46,215 +85,103 @@ function resolveIds(muscles = []) {
   return ids
 }
 
-// ─── Style constants ──────────────────────────────────────────────────────────
-
-const C = '#2c3c6e'
-const BASE   = { fill: '#dce3ed', stroke: C, strokeWidth: 0.9, strokeLinejoin: 'round' }
-const STRUCT  = { fill: '#b8c5d5', stroke: C, strokeWidth: 0.9 }
-
-function ms(id, primary, secondary) {
-  if (primary.has(id))   return { fill: '#dc2626', stroke: '#7f1d1d', strokeWidth: 1.2, strokeLinejoin: 'round', filter: 'url(#glow)' }
-  if (secondary.has(id)) return { fill: '#ea580c', stroke: '#7c2d12', strokeWidth: 1.2, strokeLinejoin: 'round', filter: 'url(#glow)' }
-  return BASE
+function regionClass(regionId, primaryIds, secondaryIds) {
+  if (primaryIds.has(regionId)) return 'muscle-region muscle-region-primary'
+  if (secondaryIds.has(regionId)) return 'muscle-region muscle-region-secondary'
+  return 'muscle-region'
 }
-
-function Glow() {
-  return (
-    <defs>
-      <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
-        <feGaussianBlur stdDeviation="2.5" result="blur" />
-        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-      </filter>
-    </defs>
-  )
-}
-
-// ─── Front view ───────────────────────────────────────────────────────────────
-
-function FrontBody({ primaryIds, secondaryIds }) {
-  const s = (id) => ms(id, primaryIds, secondaryIds)
-
-  return (
-    <svg viewBox="0 0 200 460" className="w-full">
-      <Glow />
-
-      {/* Head */}
-      <ellipse cx="100" cy="26" rx="20" ry="22" {...STRUCT} />
-      {/* Neck */}
-      <path d="M 92,46 L 90,65 L 110,65 L 108,46 Z" {...STRUCT} />
-
-      {/* Torso base */}
-      <path d="M 63,68 L 62,202 C 62,218 72,226 100,228 C 128,226 138,218 138,202 L 137,68 Z" {...BASE} />
-
-      {/* Front deltoids */}
-      <path d="M 79,70 C 63,68 42,78 36,95 C 32,107 37,121 51,123 C 62,125 74,115 80,101 Z" {...s('front-delt-l')} />
-      <path d="M 121,70 C 137,68 158,78 164,95 C 168,107 163,121 149,123 C 138,125 126,115 120,101 Z" {...s('front-delt-r')} />
-
-      {/* Chest */}
-      <path d="M 80,68 C 68,74 62,88 62,105 C 62,121 72,129 100,131 L 100,68 Z" {...s('chest-l')} />
-      <path d="M 120,68 C 132,74 138,88 138,105 C 138,121 128,129 100,131 L 100,68 Z" {...s('chest-r')} />
-      <line x1="100" y1="68" x2="100" y2="131" stroke={C} strokeWidth="0.8" />
-
-      {/* Obliques */}
-      <path d="M 62,105 C 60,136 60,172 62,203 L 84,201 L 80,131 C 73,123 66,115 62,105 Z" {...s('oblique-l')} />
-      <path d="M 138,105 C 140,136 140,172 138,203 L 116,201 L 120,131 C 127,123 134,115 138,105 Z" {...s('oblique-r')} />
-
-      {/* Abs with grid */}
-      <path d="M 86,131 C 82,137 82,197 86,201 L 114,201 C 118,197 118,137 114,131 Z" {...s('abs')} />
-      <line x1="86" y1="149" x2="114" y2="149" stroke={C} strokeWidth="0.7" />
-      <line x1="86" y1="167" x2="114" y2="167" stroke={C} strokeWidth="0.7" />
-      <line x1="86" y1="185" x2="114" y2="185" stroke={C} strokeWidth="0.7" />
-      <line x1="100" y1="131" x2="100" y2="201" stroke={C} strokeWidth="0.7" />
-
-      {/* Hip flexors */}
-      <path d="M 62,201 C 60,219 65,231 80,235 L 93,229 L 90,212 L 75,203 Z" {...s('hip-flex-l')} />
-      <path d="M 138,201 C 140,219 135,231 120,235 L 107,229 L 110,212 L 125,203 Z" {...s('hip-flex-r')} />
-
-      {/* Biceps */}
-      <path d="M 37,95 C 26,107 20,130 24,152 C 27,164 39,170 51,164 C 59,160 63,148 61,133 L 54,101 Z" {...s('bicep-l')} />
-      <path d="M 163,95 C 174,107 180,130 176,152 C 173,164 161,170 149,164 C 141,160 137,148 139,133 L 146,101 Z" {...s('bicep-r')} />
-
-      {/* Forearms */}
-      <path d="M 22,164 C 14,176 12,200 16,218 C 18,230 30,234 40,230 C 48,226 52,214 50,200 L 46,164 Z" {...s('forearm-l')} />
-      <path d="M 178,164 C 186,176 188,200 184,218 C 182,230 170,234 160,230 C 152,226 148,214 150,200 L 154,164 Z" {...s('forearm-r')} />
-
-      {/* Hands */}
-      <ellipse cx="26" cy="240" rx="13" ry="9" {...STRUCT} />
-      <ellipse cx="174" cy="240" rx="13" ry="9" {...STRUCT} />
-
-      {/* Adductors */}
-      <ellipse cx="91" cy="280" rx="9" ry="36" {...s('adductor-l')} />
-      <ellipse cx="109" cy="280" rx="9" ry="36" {...s('adductor-r')} />
-
-      {/* Quads */}
-      <path d="M 65,234 C 55,248 51,280 55,310 C 57,328 69,340 83,338 C 96,336 100,322 98,302 L 94,234 Z" {...s('quad-l')} />
-      <path d="M 135,234 C 145,248 149,280 145,310 C 143,328 131,340 117,338 C 104,336 100,322 102,302 L 106,234 Z" {...s('quad-r')} />
-
-      {/* Knees */}
-      <ellipse cx="81" cy="346" rx="16" ry="10" {...STRUCT} />
-      <ellipse cx="119" cy="346" rx="16" ry="10" {...STRUCT} />
-
-      {/* Calves / tibialis anterior */}
-      <path d="M 67,354 C 57,368 57,402 63,422 C 67,432 79,436 89,430 C 96,426 96,408 94,386 L 85,354 Z" {...s('calf-l')} />
-      <path d="M 133,354 C 143,368 143,402 137,422 C 133,432 121,436 111,430 C 104,426 104,408 106,386 L 115,354 Z" {...s('calf-r')} />
-
-      {/* Feet */}
-      <ellipse cx="80" cy="442" rx="17" ry="8" {...STRUCT} />
-      <ellipse cx="120" cy="442" rx="17" ry="8" {...STRUCT} />
-    </svg>
-  )
-}
-
-// ─── Back view ────────────────────────────────────────────────────────────────
-
-function BackBody({ primaryIds, secondaryIds }) {
-  const s = (id) => ms(id, primaryIds, secondaryIds)
-
-  return (
-    <svg viewBox="0 0 200 460" className="w-full">
-      <Glow />
-
-      {/* Head */}
-      <ellipse cx="100" cy="26" rx="20" ry="22" {...STRUCT} />
-      {/* Neck */}
-      <path d="M 92,46 L 90,65 L 110,65 L 108,46 Z" {...STRUCT} />
-
-      {/* Torso base */}
-      <path d="M 63,68 L 62,202 C 62,218 72,226 100,228 C 128,226 138,218 138,202 L 137,68 Z" {...BASE} />
-
-      {/* Rear deltoids */}
-      <path d="M 79,70 C 63,68 42,78 36,95 C 32,107 37,121 51,123 C 62,125 74,115 80,101 Z" {...s('rear-delt-l')} />
-      <path d="M 121,70 C 137,68 158,78 164,95 C 168,107 163,121 149,123 C 138,125 126,115 120,101 Z" {...s('rear-delt-r')} />
-
-      {/* Traps */}
-      <path d="M 80,66 L 100,92 L 120,66 L 140,78 L 100,112 L 60,78 Z" {...s('traps')} />
-
-      {/* Upper back / rhomboids */}
-      <path d="M 80,112 L 82,148 Q 91,152 100,154 Q 109,152 118,148 L 120,112 L 100,92 Z" {...s('upper-back')} />
-
-      {/* Lats */}
-      <path d="M 62,104 C 50,122 48,158 54,180 C 57,190 67,196 77,190 L 82,148 L 80,108 Z" {...s('lat-l')} />
-      <path d="M 138,104 C 150,122 152,158 146,180 C 143,190 133,196 123,190 L 118,148 L 120,108 Z" {...s('lat-r')} />
-
-      {/* Lower back */}
-      <ellipse cx="100" cy="182" rx="22" ry="24" {...s('lower-back')} />
-
-      {/* Triceps */}
-      <path d="M 37,95 C 26,107 20,132 24,154 C 27,166 39,172 51,166 C 59,162 63,150 61,136 L 54,101 Z" {...s('tricep-l')} />
-      <path d="M 163,95 C 174,107 180,132 176,154 C 173,166 161,172 149,166 C 141,162 137,150 139,136 L 146,101 Z" {...s('tricep-r')} />
-
-      {/* Forearms */}
-      <path d="M 22,164 C 14,176 12,200 16,218 C 18,230 30,234 40,230 C 48,226 52,214 50,200 L 46,164 Z" {...s('forearm-l')} />
-      <path d="M 178,164 C 186,176 188,200 184,218 C 182,230 170,234 160,230 C 152,226 148,214 150,200 L 154,164 Z" {...s('forearm-r')} />
-
-      {/* Hands */}
-      <ellipse cx="26" cy="240" rx="13" ry="9" {...STRUCT} />
-      <ellipse cx="174" cy="240" rx="13" ry="9" {...STRUCT} />
-
-      {/* Glutes */}
-      <ellipse cx="82" cy="220" rx="22" ry="22" {...s('glute-l')} />
-      <ellipse cx="118" cy="220" rx="22" ry="22" {...s('glute-r')} />
-
-      {/* Abductors */}
-      <ellipse cx="65" cy="274" rx="12" ry="42" {...s('abductor-l')} />
-      <ellipse cx="135" cy="274" rx="12" ry="42" {...s('abductor-r')} />
-
-      {/* Hamstrings */}
-      <path d="M 65,242 C 55,256 51,288 55,316 C 57,332 69,342 83,340 C 96,338 100,324 98,304 L 94,242 Z" {...s('ham-l')} />
-      <path d="M 135,242 C 145,256 149,288 145,316 C 143,332 131,342 117,340 C 104,338 100,324 102,304 L 106,242 Z" {...s('ham-r')} />
-
-      {/* Knees */}
-      <ellipse cx="81" cy="348" rx="16" ry="10" {...STRUCT} />
-      <ellipse cx="119" cy="348" rx="16" ry="10" {...STRUCT} />
-
-      {/* Calves / gastrocnemius */}
-      <path d="M 67,356 C 57,370 57,404 63,424 C 67,434 79,438 89,432 C 96,428 96,410 94,388 L 85,356 Z" {...s('calf-l')} />
-      <path d="M 133,356 C 143,370 143,404 137,424 C 133,434 121,438 111,432 C 104,428 104,410 106,388 L 115,356 Z" {...s('calf-r')} />
-
-      {/* Feet */}
-      <ellipse cx="80" cy="444" rx="17" ry="8" {...STRUCT} />
-      <ellipse cx="120" cy="444" rx="17" ry="8" {...STRUCT} />
-    </svg>
-  )
-}
-
-// ─── Public component ─────────────────────────────────────────────────────────
 
 export default function MuscleMap({ primaryMuscles = [], secondaryMuscles = [] }) {
-  const primaryIds   = resolveIds(primaryMuscles)
+  const primaryIds = resolveIds(primaryMuscles)
   const secondaryIds = resolveIds(secondaryMuscles)
 
   return (
     <div className="select-none">
-      {/* Both views side by side */}
-      <div className="bg-slate-100 rounded-2xl py-3 px-2">
-        <div className="flex gap-1">
-          <div className="flex-1">
-            <p className="text-center text-[10px] font-medium text-slate-400 mb-1 uppercase tracking-wide">Front</p>
-            <FrontBody primaryIds={primaryIds} secondaryIds={secondaryIds} />
-          </div>
-          <div className="flex-1">
-            <p className="text-center text-[10px] font-medium text-slate-400 mb-1 uppercase tracking-wide">Back</p>
-            <BackBody primaryIds={primaryIds} secondaryIds={secondaryIds} />
-          </div>
+      <div className="bg-white rounded-2xl py-3 px-2 border border-gray-100">
+        <div className="relative mx-auto w-full max-w-[370px] overflow-hidden rounded-lg bg-white">
+          <img
+            src={bodyImage}
+            alt="Front and back muscle anatomy"
+            className="block w-full h-auto"
+            draggable="false"
+          />
+          <svg
+            viewBox="0 0 740 656"
+            className="absolute inset-0 h-full w-full"
+            aria-hidden="true"
+          >
+            <defs>
+              <filter id="primary-glow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+                <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0.4 0 0 0 0 0.02 0 0 0 0 0.02 0 0 0 0.5 0" />
+                <feMerge>
+                  <feMergeNode />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter id="secondary-glow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+                <feColorMatrix in="blur" type="matrix" values="1 0.32 0 0 0.45 0 0.14 0 0 0.08 0 0 0 0 0.02 0 0 0 0.45 0" />
+                <feMerge>
+                  <feMergeNode />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {REGIONS.map((region) => (
+              <polygon
+                key={`${region.id}-${region.label}`}
+                points={region.points}
+                className={regionClass(region.id, primaryIds, secondaryIds)}
+              >
+                <title>{region.label}</title>
+              </polygon>
+            ))}
+          </svg>
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-4 mt-2">
-        {primaryIds.size > 0 && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
-            <span className="text-xs text-gray-400">Primary</span>
-          </div>
-        )}
-        {secondaryIds.size > 0 && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
-            <span className="text-xs text-gray-400">Secondary</span>
-          </div>
-        )}
-      </div>
+      {(primaryIds.size > 0 || secondaryIds.size > 0) && (
+        <div className="flex items-center justify-center gap-5 mt-2">
+          {primaryIds.size > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
+              <span className="text-xs text-gray-400">Primary</span>
+            </div>
+          )}
+          {secondaryIds.size > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+              <span className="text-xs text-gray-400">Secondary</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      <style>{`
+        .muscle-region {
+          fill: transparent;
+          stroke: transparent;
+          stroke-linejoin: round;
+          stroke-width: 2;
+          vector-effect: non-scaling-stroke;
+          pointer-events: none;
+          transition: fill 180ms ease, stroke 180ms ease, opacity 180ms ease;
+        }
+
+        .muscle-region-primary {
+          fill: rgba(220, 38, 38, 0.62);
+          stroke: rgba(127, 29, 29, 0.85);
+          filter: url(#primary-glow);
+        }
+
+        .muscle-region-secondary {
+          fill: rgba(249, 115, 22, 0.55);
+          stroke: rgba(154, 52, 18, 0.82);
+          filter: url(#secondary-glow);
+        }
+      `}</style>
     </div>
   )
 }

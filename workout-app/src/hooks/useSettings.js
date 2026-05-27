@@ -1,7 +1,11 @@
 import { useState } from 'react'
 
 const SETTINGS_KEY = 'fittrack-settings'
-const DEFAULTS = { countdownSeconds: 3, restSeconds: 90 }
+const DEFAULTS = {
+  countdownSeconds: 3,
+  restTimerEnabled: true,
+  restSeconds: 90,
+}
 
 export function useSettings() {
   const [settings, setSettings] = useState(() => {
