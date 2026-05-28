@@ -11,8 +11,51 @@ import ExerciseImage from '../components/ExerciseImage'
 import ExerciseGroupPicker from '../components/ExerciseGroupPicker'
 
 const DRAFT_KEY = 'fittrack-workout-draft'
+const WORKOUT_TIMER_KEY = 'fittrack-workout-duration-timer'
 
 const fmtTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
+
+const readWorkoutTimer = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(WORKOUT_TIMER_KEY) || 'null')
+    if (!saved) return null
+
+    if (saved.state === 'running' && saved.startedAt) {
+      return {
+        state: 'running',
+        elapsed: Math.max(0, Math.floor((Date.now() - saved.startedAt) / 1000)),
+        countdown: 0,
+        startedAt: saved.startedAt,
+      }
+    }
+
+    if (saved.state === 'countdown' && saved.countdownEndsAt) {
+      const remaining = Math.ceil((saved.countdownEndsAt - Date.now()) / 1000)
+      if (remaining > 0) {
+        return { state: 'countdown', elapsed: 0, countdown: remaining, startedAt: null }
+      }
+      return {
+        state: 'running',
+        elapsed: Math.max(0, Math.floor((Date.now() - saved.countdownEndsAt) / 1000)),
+        countdown: 0,
+        startedAt: saved.countdownEndsAt,
+      }
+    }
+
+    if (saved.state === 'paused') {
+      return {
+        state: 'paused',
+        elapsed: saved.elapsed || 0,
+        countdown: 0,
+        startedAt: null,
+      }
+    }
+  } catch {
+    localStorage.removeItem(WORKOUT_TIMER_KEY)
+  }
+
+  return null
+}
 
 const playRestDoneTone = () => {
   try {
@@ -333,6 +376,7 @@ export default function LogWorkout() {
   const navigate = useNavigate()
   const { id: editId } = useParams()
   const isEditing = !!editId
+  const savedDurTimer = useMemo(() => readWorkoutTimer(), [])
 
   const { workouts, loading, addWorkout, updateWorkout, getWorkoutsByExercise } = useWorkouts()
   const { settings } = useSettings()
@@ -342,12 +386,13 @@ export default function LogWorkout() {
   const [notes, setNotes] = useState('')
   const [duration, setDuration] = useState('')
   const [activeRest, setActiveRest] = useState(null)
+  const [restMinimized, setRestMinimized] = useState(false)
 
   // Workout duration timer
-  const [durState, setDurState] = useState('idle') // idle|countdown|running|paused
-  const [durElapsed, setDurElapsed] = useState(0)
-  const [durCountdown, setDurCountdown] = useState(0)
-  const durStartRef = useRef(null)
+  const [durState, setDurState] = useState(savedDurTimer?.state || 'idle') // idle|countdown|running|paused
+  const [durElapsed, setDurElapsed] = useState(savedDurTimer?.elapsed || 0)
+  const [durCountdown, setDurCountdown] = useState(savedDurTimer?.countdown || 0)
+  const durStartRef = useRef(savedDurTimer?.startedAt || null)
 
   useEffect(() => {
     if (durState !== 'countdown') return
@@ -364,6 +409,31 @@ export default function LogWorkout() {
     }, 1000)
     return () => clearInterval(interval)
   }, [durState]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (durState === 'idle') {
+      localStorage.removeItem(WORKOUT_TIMER_KEY)
+      return
+    }
+
+    if (durState === 'running') {
+      const startedAt = durStartRef.current || Date.now() - durElapsed * 1000
+      localStorage.setItem(WORKOUT_TIMER_KEY, JSON.stringify({ state: 'running', startedAt }))
+      return
+    }
+
+    if (durState === 'countdown') {
+      localStorage.setItem(WORKOUT_TIMER_KEY, JSON.stringify({
+        state: 'countdown',
+        countdownEndsAt: Date.now() + durCountdown * 1000,
+      }))
+      return
+    }
+
+    if (durState === 'paused') {
+      localStorage.setItem(WORKOUT_TIMER_KEY, JSON.stringify({ state: 'paused', elapsed: durElapsed }))
+    }
+  }, [durState, durElapsed, durCountdown])
 
   useEffect(() => {
     if (!activeRest) return
@@ -387,7 +457,13 @@ export default function LogWorkout() {
     else setDurState('running')
   }
   const pauseDurTimer = () => setDurState('paused')
-  const resetDurTimer = () => { setDurState('idle'); setDurElapsed(0); setDurCountdown(0) }
+  const resetDurTimer = () => {
+    setDurState('idle')
+    setDurElapsed(0)
+    setDurCountdown(0)
+    durStartRef.current = null
+    localStorage.removeItem(WORKOUT_TIMER_KEY)
+  }
   const saveDurTimer = () => {
     setDuration(String(Math.max(1, Math.round(durElapsed / 60))))
     resetDurTimer()
@@ -444,7 +520,7 @@ export default function LogWorkout() {
             setNotes(draft.notes || '')
             setEntries(draft.entries.map((entry) => ({
               ...entry,
-              restSeconds: entry.restSeconds ?? settings.restSeconds,
+              restSeconds: settings.restSeconds,
             })))
             setDraftRestored(true)
           }
@@ -462,13 +538,22 @@ export default function LogWorkout() {
     localStorage.setItem(DRAFT_KEY, JSON.stringify({ date, duration, notes, entries }))
   }, [initialized, isEditing, date, duration, notes, entries])
 
+  useEffect(() => {
+    if (!initialized) return
+    // Keep current exercise rest defaults aligned with the Settings value.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEntries((prev) => prev.map((entry) => ({ ...entry, restSeconds: settings.restSeconds })))
+  }, [initialized, settings.restSeconds])
+
   const clearDraft = () => {
     localStorage.removeItem(DRAFT_KEY)
+    localStorage.removeItem(WORKOUT_TIMER_KEY)
     setDraftRestored(false)
     setDate(format(new Date(), 'yyyy-MM-dd'))
     setDuration('')
     setNotes('')
     setEntries([])
+    resetDurTimer()
   }
 
   const loadTemplate = (template) => {
@@ -511,6 +596,7 @@ export default function LogWorkout() {
     if (!settings.restTimerEnabled) return
     const seconds = entry.restSeconds ?? settings.restSeconds
     if (!seconds || seconds <= 0) return
+    setRestMinimized(false)
     setActiveRest({
       entryId: entry.id,
       exerciseName: entry.exerciseName,
@@ -559,6 +645,7 @@ export default function LogWorkout() {
       setSaving(false)
     } else {
       if (!isEditing) localStorage.removeItem(DRAFT_KEY)
+      localStorage.removeItem(WORKOUT_TIMER_KEY)
       navigate('/history')
     }
   }
@@ -631,48 +718,67 @@ export default function LogWorkout() {
       )}
 
       {activeRest && (
-        <div className="fixed left-4 right-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl border border-blue-500/30 bg-gray-950/95 p-4 shadow-2xl backdrop-blur">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300">
-              <BellRing size={18} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-blue-300">
-                Rest timer
-              </p>
-              <p className="truncate text-sm text-gray-300">{activeRest.exerciseName}</p>
-            </div>
-            <div className="text-2xl font-bold tabular-nums text-white">{fmtTime(activeRest.remaining)}</div>
-          </div>
+        restMinimized ? (
+          <button
+            onClick={() => setRestMinimized(false)}
+            className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-blue-500/30 bg-gray-950/95 px-3 py-2 shadow-2xl backdrop-blur"
+          >
+            <BellRing size={15} className="text-blue-300" />
+            <span className="font-mono text-sm font-bold tabular-nums text-white">{fmtTime(activeRest.remaining)}</span>
+            <ChevronUp size={14} className="text-gray-500" />
+          </button>
+        ) : (
+          <div className="fixed left-4 right-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl border border-blue-500/30 bg-gray-950/95 p-4 shadow-2xl backdrop-blur">
+            <button
+              onClick={() => setRestMinimized(true)}
+              title="Minimize rest timer"
+              className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-800 hover:text-gray-200"
+            >
+              <ChevronDown size={15} />
+            </button>
 
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-800">
-            <div
-              className="h-full rounded-full bg-blue-400 transition-all"
-              style={{ width: `${Math.max(0, Math.min(100, (activeRest.remaining / activeRest.total) * 100))}%` }}
-            />
-          </div>
+            <div className="flex items-center gap-3 pr-8">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300">
+                <BellRing size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium uppercase tracking-wide text-blue-300">
+                  Rest timer
+                </p>
+                <p className="truncate text-sm text-gray-300">{activeRest.exerciseName}</p>
+              </div>
+              <div className="text-2xl font-bold tabular-nums text-white">{fmtTime(activeRest.remaining)}</div>
+            </div>
 
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <button
-              onClick={() => adjustActiveRest(-15)}
-              className="rounded-lg border border-gray-800 py-2 text-xs font-medium text-gray-400 hover:border-gray-700 hover:text-gray-200"
-            >
-              -15s
-            </button>
-            <button
-              onClick={() => setActiveRest(null)}
-              className="rounded-lg border border-blue-500/30 bg-blue-500/10 py-2 text-xs font-semibold text-blue-300 hover:bg-blue-500/20"
-            >
-              Skip
-            </button>
-            <button
-              onClick={() => adjustActiveRest(15)}
-              className="rounded-lg border border-gray-800 py-2 text-xs font-medium text-gray-400 hover:border-gray-700 hover:text-gray-200"
-            >
-              +15s
-            </button>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-800">
+              <div
+                className="h-full rounded-full bg-blue-400 transition-all"
+                style={{ width: `${Math.max(0, Math.min(100, (activeRest.remaining / activeRest.total) * 100))}%` }}
+              />
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <button
+                onClick={() => adjustActiveRest(-15)}
+                className="rounded-lg border border-gray-800 py-2 text-xs font-medium text-gray-400 hover:border-gray-700 hover:text-gray-200"
+              >
+                -15s
+              </button>
+              <button
+                onClick={() => setActiveRest(null)}
+                className="rounded-lg border border-blue-500/30 bg-blue-500/10 py-2 text-xs font-semibold text-blue-300 hover:bg-blue-500/20"
+              >
+                Skip
+              </button>
+              <button
+                onClick={() => adjustActiveRest(15)}
+                className="rounded-lg border border-gray-800 py-2 text-xs font-medium text-gray-400 hover:border-gray-700 hover:text-gray-200"
+              >
+                +15s
+              </button>
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {/* Workout meta */}

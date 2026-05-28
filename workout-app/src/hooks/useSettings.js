@@ -7,11 +7,17 @@ const DEFAULTS = {
   restSeconds: 90,
 }
 
+const normalizeSettings = (value = {}) => {
+  const settings = { ...value }
+  delete settings.supersetsEnabled
+  return { ...DEFAULTS, ...settings }
+}
+
 export function useSettings() {
   const [settings, setSettings] = useState(() => {
     try {
       const saved = localStorage.getItem(SETTINGS_KEY)
-      return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : DEFAULTS
+      return saved ? normalizeSettings(JSON.parse(saved)) : DEFAULTS
     } catch {
       return DEFAULTS
     }
