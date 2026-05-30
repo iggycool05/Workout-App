@@ -7,6 +7,7 @@ import { exercises } from '../data/exercises'
 import { useWorkouts } from '../hooks/useWorkouts'
 import { useSettings } from '../hooks/useSettings'
 import { useTemplates } from '../hooks/useTemplates'
+import { useExerciseNotes } from '../hooks/useExerciseNotes'
 import ExerciseImage from '../components/ExerciseImage'
 import ExerciseGroupPicker from '../components/ExerciseGroupPicker'
 
@@ -250,6 +251,8 @@ function ExerciseBlock({
   countdownSeconds,
   restTimerEnabled,
   onSetCompleted,
+  exerciseNote,
+  onExerciseNoteChange,
 }) {
   const ex = exercises.find((e) => e.id === entry.exerciseId)
   const [collapsed, setCollapsed] = useState(false)
@@ -332,6 +335,17 @@ function ExerciseBlock({
             </div>
           )}
 
+          <label className="mb-3 block rounded-lg bg-gray-800/50 border border-gray-800 px-2.5 py-2">
+            <span className="mb-1 block text-xs text-gray-500">Exercise notes</span>
+            <textarea
+              value={exerciseNote}
+              onChange={(e) => onExerciseNoteChange(e.target.value)}
+              placeholder="Cues, setup, tempo, seat height..."
+              rows={2}
+              className="w-full resize-none bg-transparent text-xs leading-relaxed text-gray-300 placeholder-gray-600 focus:outline-none"
+            />
+          </label>
+
           <div className="flex items-center gap-1.5 mb-1 pl-5 text-xs text-gray-600 uppercase tracking-wide">
             {ex.trackTime ? (
               <span className="flex-1">Time (sec)</span>
@@ -381,6 +395,7 @@ export default function LogWorkout() {
   const { workouts, loading, addWorkout, updateWorkout, getWorkoutsByExercise } = useWorkouts()
   const { settings } = useSettings()
   const { templates } = useTemplates()
+  const { getExerciseNote, updateExerciseNote } = useExerciseNotes()
 
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [notes, setNotes] = useState('')
@@ -911,6 +926,8 @@ export default function LogWorkout() {
             countdownSeconds={settings.countdownSeconds}
             restTimerEnabled={settings.restTimerEnabled}
             onSetCompleted={startRestForEntry}
+            exerciseNote={getExerciseNote(entry.exerciseId)}
+            onExerciseNoteChange={(note) => updateExerciseNote(entry.exerciseId, note)}
           />
         ))}
       </div>

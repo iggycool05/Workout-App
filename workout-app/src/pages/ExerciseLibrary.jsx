@@ -3,6 +3,7 @@ import { Search } from 'lucide-react'
 import { exercises, CATEGORIES, EQUIPMENT, groupExercises } from '../data/exercises'
 import ExerciseImage from '../components/ExerciseImage'
 import MuscleMap from '../components/MuscleMap'
+import { useExerciseNotes } from '../hooks/useExerciseNotes'
 
 export default function ExerciseLibrary() {
   const [search, setSearch] = useState('')
@@ -10,6 +11,7 @@ export default function ExerciseLibrary() {
   const [activeEquipment, setActiveEquipment] = useState('all')
   const [selected, setSelected] = useState(null)
   const [openGroup, setOpenGroup] = useState(null)
+  const { getExerciseNote, updateExerciseNote } = useExerciseNotes()
 
   const filtered = useMemo(() => {
     return exercises.filter((e) => {
@@ -213,6 +215,16 @@ export default function ExerciseLibrary() {
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Instructions</p>
                 <p className="text-gray-400 text-xs leading-relaxed">{selected.description}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Personal Notes</p>
+                <textarea
+                  value={getExerciseNote(selected.id)}
+                  onChange={(e) => updateExerciseNote(selected.id, e.target.value)}
+                  placeholder="Add cues, setup notes, seat height, grip, tempo..."
+                  rows={4}
+                  className="w-full resize-none rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-xs leading-relaxed text-gray-300 placeholder-gray-600 focus:outline-none focus:border-emerald-500/50"
+                />
               </div>
             </div>
           </div>
