@@ -261,10 +261,11 @@ export function useWorkouts() {
         const totalVolume = done.reduce((sum, s) => sum + (s.reps || 0) * (s.weight || 0), 0)
         const totalReps = done.reduce((sum, s) => sum + (s.reps || 0), 0)
         const totalTime = done.reduce((sum, s) => sum + (s.time || 0), 0)
+        const maxTime = done.reduce((m, s) => Math.max(m, s.time || 0), 0)
         const orm = maxWeight > 0 && done.length > 0
           ? Math.round(maxWeight * (1 + totalReps / (done.length * 30)))
           : 0
-        return { date: w.date, workoutId: w.id, maxWeight, totalVolume, totalReps, totalTime, oneRepMax: orm, setsCount: done.length, sets: done }
+        return { date: w.date, workoutId: w.id, maxWeight, totalVolume, totalReps, totalTime, maxTime, oneRepMax: orm, setsCount: done.length, sets: done }
       })
       .sort((a, b) => new Date(a.date) - new Date(b.date))
 

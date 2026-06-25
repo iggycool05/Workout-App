@@ -19,6 +19,8 @@ const METRICS = [
   { key: 'totalReps', label: 'Total Reps' },
   { key: 'oneRepMax', label: 'Est. 1RM' },
   { key: 'setsCount', label: 'Sets' },
+  { key: 'maxTime', label: 'Best Set Time (s)' },
+  { key: 'totalTime', label: 'Total Time (s)' },
 ]
 
 const CHART_PALETTE = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']

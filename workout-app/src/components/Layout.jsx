@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Dumbbell, PlusCircle, History, TrendingUp, BarChart3, Settings, Menu, X, LogOut, LayoutTemplate, CloudUpload } from 'lucide-react'
+import { LayoutDashboard, Dumbbell, PlusCircle, History, TrendingUp, BarChart3, Settings, Menu, X, LogOut, LayoutTemplate, CloudUpload, Scale } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
@@ -11,7 +11,16 @@ const navItems = [
   { to: '/progress', icon: TrendingUp, label: 'Progress' },
   { to: '/charts', icon: BarChart3, label: 'Custom Charts' },
   { to: '/templates', icon: LayoutTemplate, label: 'Templates' },
+  { to: '/weight', icon: Scale, label: 'Weight' },
   { to: '/settings', icon: Settings, label: 'Settings' },
+]
+
+const bottomNavItems = [
+  { to: '/', icon: LayoutDashboard, label: 'Home' },
+  { to: '/log', icon: PlusCircle, label: 'Log' },
+  { to: '/history', icon: History, label: 'History' },
+  { to: '/weight', icon: Scale, label: 'Weight' },
+  { to: '/progress', icon: TrendingUp, label: 'Progress' },
 ]
 
 const OFFLINE_QUEUE_KEY = 'fittrack-offline-queue'
@@ -106,7 +115,7 @@ export default function Layout() {
 
       {/* Main content */}
       <div className="flex flex-1 flex-col min-w-0">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-gray-800 bg-gray-950/80 backdrop-blur px-4 lg:px-6">
+        <header className="sticky top-0 z-30 flex min-h-16 items-center gap-4 border-b border-gray-800 bg-gray-950/80 backdrop-blur px-4 lg:px-6 pt-safe lg:pt-0">
           <button
             onClick={() => setOpen(true)}
             className="lg:hidden text-gray-400 hover:text-white transition-colors"
@@ -127,10 +136,29 @@ export default function Layout() {
           )}
         </header>
 
-        <main className="flex-1 p-4 lg:p-6">
+        <main className="flex-1 p-4 pb-24 lg:p-6 lg:pb-6">
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex lg:hidden border-t border-gray-800 bg-gray-950/95 backdrop-blur pb-safe">
+        {bottomNavItems.map(({ to, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/'}
+            className={({ isActive }) =>
+              `flex flex-1 flex-col items-center justify-center gap-0.5 py-3 min-h-[56px] text-xs font-medium transition-colors ${
+                isActive ? 'text-emerald-400' : 'text-gray-500'
+              }`
+            }
+          >
+            <Icon size={20} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }

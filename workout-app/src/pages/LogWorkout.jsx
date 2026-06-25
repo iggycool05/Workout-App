@@ -79,6 +79,15 @@ const playRestDoneTone = () => {
   }
 }
 
+const requestNotifPermission = async () => {
+  if (!('Notification' in window)) return false
+  if (Notification.permission === 'granted') return true
+  if (Notification.permission === 'denied') return false
+  return (await Notification.requestPermission()) === 'granted'
+}
+
+const postToSW = (msg) => navigator.serviceWorker?.controller?.postMessage(msg)
+
 function SetRow({ set, onChange, onDelete, trackTime, countdownSeconds }) {
   // 'idle' | 'countdown' | 'running' | 'paused'
   const [timerState, setTimerState] = useState('idle')
@@ -402,6 +411,7 @@ export default function LogWorkout() {
   const [duration, setDuration] = useState('')
   const [activeRest, setActiveRest] = useState(null)
   const [restMinimized, setRestMinimized] = useState(false)
+  const restEndTimeRef = useRef(null)
 
   // Workout duration timer
   const [durState, setDurState] = useState(savedDurTimer?.state || 'idle') // idle|countdown|running|paused
@@ -458,6 +468,8 @@ export default function LogWorkout() {
         if (!current) return null
         if (current.remaining <= 1) {
           playRestDoneTone()
+          postToSW({ type: 'CANCEL_REST_TIMER' })
+          restEndTimeRef.current = null
           return null
         }
         return { ...current, remaining: current.remaining - 1 }
@@ -466,6 +478,33 @@ export default function LogWorkout() {
 
     return () => clearTimeout(timer)
   }, [activeRest])
+
+  // Re-sync rest timer and workout duration timer when screen comes back on
+  useEffect(() => {
+    const syncRest = () => {
+      if (document.visibilityState !== 'visible' || !restEndTimeRef.current) return
+      const remaining = Math.ceil((restEndTimeRef.current - Date.now()) / 1000)
+      if (remaining <= 0) {
+        playRestDoneTone()
+        postToSW({ type: 'CANCEL_REST_TIMER' })
+        restEndTimeRef.current = null
+        setActiveRest(null)
+      } else {
+        setActiveRest((cur) => (cur ? { ...cur, remaining } : null))
+      }
+    }
+    document.addEventListener('visibilitychange', syncRest)
+    return () => document.removeEventListener('visibilitychange', syncRest)
+  }, [])
+
+  useEffect(() => {
+    const syncDur = () => {
+      if (document.visibilityState !== 'visible' || durState !== 'running') return
+      if (durStartRef.current) setDurElapsed(Math.floor((Date.now() - durStartRef.current) / 1000))
+    }
+    document.addEventListener('visibilitychange', syncDur)
+    return () => document.removeEventListener('visibilitychange', syncDur)
+  }, [durState])
 
   const startDurTimer = () => {
     if (settings.countdownSeconds > 0) { setDurCountdown(settings.countdownSeconds); setDurState('countdown') }
@@ -618,6 +657,11 @@ export default function LogWorkout() {
       total: seconds,
       remaining: seconds,
     })
+    const endTime = Date.now() + seconds * 1000
+    restEndTimeRef.current = endTime
+    requestNotifPermission().then(() =>
+      postToSW({ type: 'SCHEDULE_REST_TIMER', endTime, label: entry.exerciseName })
+    )
   }
 
   const adjustActiveRest = (delta) => {
@@ -736,18 +780,18 @@ export default function LogWorkout() {
         restMinimized ? (
           <button
             onClick={() => setRestMinimized(false)}
-            className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-blue-500/30 bg-gray-950/95 px-3 py-2 shadow-2xl backdrop-blur"
+            className="fixed bottom-24 lg:bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-blue-500/30 bg-gray-950/95 px-3 py-2 shadow-2xl backdrop-blur"
           >
             <BellRing size={15} className="text-blue-300" />
             <span className="font-mono text-sm font-bold tabular-nums text-white">{fmtTime(activeRest.remaining)}</span>
             <ChevronUp size={14} className="text-gray-500" />
           </button>
         ) : (
-          <div className="fixed left-4 right-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl border border-blue-500/30 bg-gray-950/95 p-4 shadow-2xl backdrop-blur">
+          <div className="fixed left-4 right-4 bottom-24 lg:bottom-4 z-50 mx-auto max-w-md rounded-2xl border border-blue-500/30 bg-gray-950/95 p-4 shadow-2xl backdrop-blur">
             <button
               onClick={() => setRestMinimized(true)}
               title="Minimize rest timer"
-              className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-800 hover:text-gray-200"
+              className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-800 hover:text-gray-200"
             >
               <ChevronDown size={15} />
             </button>
@@ -775,19 +819,23 @@ export default function LogWorkout() {
             <div className="mt-3 grid grid-cols-3 gap-2">
               <button
                 onClick={() => adjustActiveRest(-15)}
-                className="rounded-lg border border-gray-800 py-2 text-xs font-medium text-gray-400 hover:border-gray-700 hover:text-gray-200"
+                className="rounded-lg border border-gray-800 py-3 min-h-[44px] text-xs font-medium text-gray-400 hover:border-gray-700 hover:text-gray-200"
               >
                 -15s
               </button>
               <button
-                onClick={() => setActiveRest(null)}
-                className="rounded-lg border border-blue-500/30 bg-blue-500/10 py-2 text-xs font-semibold text-blue-300 hover:bg-blue-500/20"
+                onClick={() => {
+                  setActiveRest(null)
+                  postToSW({ type: 'CANCEL_REST_TIMER' })
+                  restEndTimeRef.current = null
+                }}
+                className="rounded-lg border border-blue-500/30 bg-blue-500/10 py-3 min-h-[44px] text-xs font-semibold text-blue-300 hover:bg-blue-500/20"
               >
                 Skip
               </button>
               <button
                 onClick={() => adjustActiveRest(15)}
-                className="rounded-lg border border-gray-800 py-2 text-xs font-medium text-gray-400 hover:border-gray-700 hover:text-gray-200"
+                className="rounded-lg border border-gray-800 py-3 min-h-[44px] text-xs font-medium text-gray-400 hover:border-gray-700 hover:text-gray-200"
               >
                 +15s
               </button>

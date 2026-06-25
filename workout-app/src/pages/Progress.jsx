@@ -15,6 +15,8 @@ const METRICS = [
   { key: 'totalReps', label: 'Total Reps' },
   { key: 'oneRepMax', label: 'Est. 1RM (lbs)' },
   { key: 'setsCount', label: 'Sets Completed' },
+  { key: 'maxTime', label: 'Best Set Time (s)' },
+  { key: 'totalTime', label: 'Total Time (s)' },
 ]
 
 const CHART_TYPES = ['line', 'bar', 'area']
