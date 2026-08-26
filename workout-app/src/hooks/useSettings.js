@@ -5,6 +5,7 @@ const DEFAULTS = {
   countdownSeconds: 3,
   restTimerEnabled: true,
   restSeconds: 90,
+  distanceUnit: 'mi',
 }
 
 const normalizeSettings = (value = {}) => {

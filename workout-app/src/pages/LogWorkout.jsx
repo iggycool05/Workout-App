@@ -10,6 +10,7 @@ import { useTemplates } from '../hooks/useTemplates'
 import { useExerciseNotes } from '../hooks/useExerciseNotes'
 import ExerciseImage from '../components/ExerciseImage'
 import ExerciseGroupPicker from '../components/ExerciseGroupPicker'
+import { milesToUnit, unitToMiles } from '../utils/units'
 
 const DRAFT_KEY = 'fittrack-workout-draft'
 const WORKOUT_TIMER_KEY = 'fittrack-workout-duration-timer'
@@ -88,7 +89,9 @@ const requestNotifPermission = async () => {
 
 const postToSW = (msg) => navigator.serviceWorker?.controller?.postMessage(msg)
 
-function SetRow({ set, onChange, onDelete, trackTime, countdownSeconds }) {
+function SetRow({ set, onChange, onDelete, ex, distanceUnit, countdownSeconds }) {
+  const trackTime = ex.trackTime
+  const cardioMetric = ex.cardioMetric
   // 'idle' | 'countdown' | 'running' | 'paused'
   const [timerState, setTimerState] = useState('idle')
   const [timerElapsed, setTimerElapsed] = useState(0)
@@ -231,6 +234,33 @@ function SetRow({ set, onChange, onDelete, trackTime, countdownSeconds }) {
         </>
       )}
 
+      {cardioMetric === 'distance' && (
+        <input
+          type="number"
+          inputMode="decimal"
+          placeholder={distanceUnit}
+          min={0}
+          step={0.01}
+          value={set.distance ? milesToUnit(set.distance, distanceUnit) : ''}
+          onChange={(e) => {
+            const val = e.target.value === '' ? 0 : Number(e.target.value)
+            onChange({ ...set, distance: unitToMiles(val, distanceUnit) })
+          }}
+          className="w-16 shrink-0 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-200 text-center focus:outline-none focus:border-cyan-500/50"
+        />
+      )}
+      {cardioMetric === 'count' && (
+        <input
+          type="number"
+          inputMode="numeric"
+          placeholder={ex.countLabel}
+          min={0}
+          value={set.reps || ''}
+          onChange={(e) => onChange({ ...set, reps: Number(e.target.value) })}
+          className="w-16 shrink-0 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-200 text-center focus:outline-none focus:border-cyan-500/50"
+        />
+      )}
+
       <button
         onClick={() => onChange({ ...set, completed: !set.completed })}
         className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors border ${
@@ -262,6 +292,7 @@ function ExerciseBlock({
   onSetCompleted,
   exerciseNote,
   onExerciseNoteChange,
+  distanceUnit,
 }) {
   const ex = exercises.find((e) => e.id === entry.exerciseId)
   const [collapsed, setCollapsed] = useState(false)
@@ -274,6 +305,7 @@ function ExerciseBlock({
       weight: last?.weight || 0,
       reps: last?.reps || 0,
       time: last?.time || 0,
+      distance: last?.distance || 0,
       completed: false,
     }])
   }
@@ -339,7 +371,13 @@ function ExerciseBlock({
             <div className="mb-3 px-2 py-1.5 bg-gray-800/50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Previous session</p>
               <p className="text-xs text-gray-400">
-                {lastSets.map((s) => ex.trackTime ? `${s.time}s` : `${s.weight}×${s.reps}`).join(', ')}
+                {lastSets.map((s) => {
+                  if (!ex.trackTime) return `${s.weight}×${s.reps}`
+                  let str = `${s.time}s`
+                  if (ex.cardioMetric === 'distance' && s.distance) str += ` · ${milesToUnit(s.distance, distanceUnit).toFixed(2)}${distanceUnit}`
+                  if (ex.cardioMetric === 'count' && s.reps) str += ` · ${s.reps} ${ex.countLabel.toLowerCase()}`
+                  return str
+                }).join(', ')}
               </p>
             </div>
           )}
@@ -365,6 +403,8 @@ function ExerciseBlock({
                 <span className="flex-1">Reps</span>
               </>
             )}
+            {ex.cardioMetric === 'distance' && <span className="w-16 text-center shrink-0">{distanceUnit}</span>}
+            {ex.cardioMetric === 'count' && <span className="w-16 text-center shrink-0">{ex.countLabel}</span>}
             <span className="w-7 text-center">✓</span>
             <span className="w-7" />
           </div>
@@ -374,7 +414,8 @@ function ExerciseBlock({
               <SetRow
                 key={set.id}
                 set={set}
-                trackTime={ex.trackTime}
+                ex={ex}
+                distanceUnit={distanceUnit}
                 onChange={(updated) => updateSet(idx, updated)}
                 onDelete={() => deleteSet(idx)}
                 countdownSeconds={countdownSeconds}
@@ -623,6 +664,7 @@ export default function LogWorkout() {
         weight: 0,
         reps: 0,
         time: 0,
+        distance: 0,
         completed: false,
       })),
     })))
@@ -637,7 +679,7 @@ export default function LogWorkout() {
       exerciseName: ex.name,
       category: ex.category,
       restSeconds: settings.restSeconds,
-      sets: [{ id: uuidv4(), index: 1, weight: 0, reps: 0, time: 0, completed: false }],
+      sets: [{ id: uuidv4(), index: 1, weight: 0, reps: 0, time: 0, distance: 0, completed: false }],
     }])
     setShowPicker(false)
   }
@@ -976,6 +1018,7 @@ export default function LogWorkout() {
             onSetCompleted={startRestForEntry}
             exerciseNote={getExerciseNote(entry.exerciseId)}
             onExerciseNoteChange={(note) => updateExerciseNote(entry.exerciseId, note)}
+            distanceUnit={settings.distanceUnit}
           />
         ))}
       </div>

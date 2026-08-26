@@ -28,10 +28,14 @@ CREATE TABLE IF NOT EXISTS exercise_sets (
   workout_exercise_id  UUID    REFERENCES workout_exercises(id) ON DELETE CASCADE NOT NULL,
   set_index            INTEGER NOT NULL DEFAULT 1,
   weight               NUMERIC(8,2),  -- lbs or kg
-  reps                 INTEGER,
+  reps                 INTEGER,       -- also used for cardio counts (steps, strokes, jumps)
   time_seconds         INTEGER,       -- for timed exercises (cardio, plank)
+  distance             NUMERIC(6,2),  -- miles (canonical unit; UI converts to km for display)
   completed            BOOLEAN DEFAULT FALSE
 );
+
+-- Adds the distance column to a table created before this migration existed.
+ALTER TABLE exercise_sets ADD COLUMN IF NOT EXISTS distance NUMERIC(6,2);
 
 -- ============================================================
 -- INDEXES

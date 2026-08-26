@@ -979,6 +979,7 @@ export const exercises = [
     equipment: 'cardio machine',
     difficulty: 'beginner',
     trackTime: true,
+    cardioMetric: 'distance',
     description: 'Running on a treadmill at varied speeds and inclines.',
   },
   {
@@ -990,6 +991,7 @@ export const exercises = [
     equipment: 'cardio machine',
     difficulty: 'beginner',
     trackTime: true,
+    cardioMetric: 'distance',
     description: 'Cycling on a stationary bike for cardiovascular fitness.',
   },
   {
@@ -1001,7 +1003,22 @@ export const exercises = [
     equipment: 'cardio machine',
     difficulty: 'beginner',
     trackTime: true,
+    cardioMetric: 'count',
+    countLabel: 'Strokes',
     description: 'Full-body cardio rowing on an ergometer.',
+  },
+  {
+    id: 'stair-master',
+    name: 'Stair Master',
+    category: 'cardio',
+    primaryMuscles: ['Legs', 'Cardiovascular'],
+    secondaryMuscles: ['Glutes', 'Calves'],
+    equipment: 'cardio machine',
+    difficulty: 'beginner',
+    trackTime: true,
+    cardioMetric: 'count',
+    countLabel: 'Steps',
+    description: 'Stepping cardio on a stair-climbing machine.',
   },
   {
     id: 'jump-rope',
@@ -1012,6 +1029,8 @@ export const exercises = [
     equipment: 'bodyweight',
     difficulty: 'beginner',
     trackTime: true,
+    cardioMetric: 'count',
+    countLabel: 'Jumps',
     description: 'Classic skipping rope exercise for cardio and coordination.',
   },
 ]

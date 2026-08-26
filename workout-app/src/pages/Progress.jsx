@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
@@ -6,18 +6,50 @@ import {
 import { TrendingUp, Award, ChevronDown } from 'lucide-react'
 import { exercises, CATEGORIES } from '../data/exercises'
 import { useWorkouts } from '../hooks/useWorkouts'
+import { useSettings } from '../hooks/useSettings'
+import { milesToUnit } from '../utils/units'
 import { format, parseISO, subMonths } from 'date-fns'
 import ExerciseImage from '../components/ExerciseImage'
 
-const METRICS = [
+const STRENGTH_METRICS = [
   { key: 'maxWeight', label: 'Max Weight (lbs)' },
   { key: 'totalVolume', label: 'Total Volume (lbs)' },
   { key: 'totalReps', label: 'Total Reps' },
   { key: 'oneRepMax', label: 'Est. 1RM (lbs)' },
   { key: 'setsCount', label: 'Sets Completed' },
+]
+
+const TIME_METRICS = [
   { key: 'maxTime', label: 'Best Set Time (s)' },
   { key: 'totalTime', label: 'Total Time (s)' },
 ]
+
+const SETS_METRIC = { key: 'setsCount', label: 'Sets Completed' }
+
+// Which metrics make sense depends on how the exercise is tracked (weight/reps, distance, or a count like steps/strokes).
+const getMetrics = (ex, distanceUnit) => {
+  if (!ex) return STRENGTH_METRICS
+  if (ex.cardioMetric === 'distance') {
+    return [
+      { key: 'maxDistance', label: `Best Distance (${distanceUnit})` },
+      { key: 'totalDistance', label: `Total Distance (${distanceUnit})` },
+      ...TIME_METRICS,
+      SETS_METRIC,
+    ]
+  }
+  if (ex.cardioMetric === 'count') {
+    const label = ex.countLabel || 'Reps'
+    return [
+      { key: 'totalReps', label: `Total ${label}` },
+      ...TIME_METRICS,
+      SETS_METRIC,
+    ]
+  }
+  if (ex.trackTime) {
+    return [...TIME_METRICS, SETS_METRIC]
+  }
+  return STRENGTH_METRICS
+}
 
 const CHART_TYPES = ['line', 'bar', 'area']
 const RANGES = [
@@ -44,6 +76,8 @@ const CUSTOM_TOOLTIP = ({ active, payload, label }) => {
 
 export default function Progress() {
   const { workouts, loading, getWorkoutsByExercise, getPersonalRecords } = useWorkouts()
+  const { settings } = useSettings()
+  const distanceUnit = settings.distanceUnit
   const [selectedExId, setSelectedExId] = useState(exercises[0].id)
   const [metric, setMetric] = useState('maxWeight')
   const [chartType, setChartType] = useState('line')
@@ -51,6 +85,16 @@ export default function Progress() {
 
   const prs = useMemo(() => getPersonalRecords(), [workouts])
   const history = useMemo(() => getWorkoutsByExercise(selectedExId), [workouts, selectedExId])
+
+  const selectedEx = exercises.find((e) => e.id === selectedExId)
+  const metrics = useMemo(() => getMetrics(selectedEx, distanceUnit), [selectedEx, distanceUnit])
+
+  useEffect(() => {
+    if (!metrics.some((m) => m.key === metric)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMetric(metrics[0]?.key)
+    }
+  }, [metrics]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const chartData = useMemo(() => {
     let data = history
@@ -61,11 +105,12 @@ export default function Progress() {
     return data.map((d) => ({
       ...d,
       label: format(parseISO(d.date), 'MMM d'),
+      maxDistance: Math.round(milesToUnit(d.maxDistance, distanceUnit) * 100) / 100,
+      totalDistance: Math.round(milesToUnit(d.totalDistance, distanceUnit) * 100) / 100,
     }))
-  }, [history, range])
+  }, [history, range, distanceUnit])
 
-  const selectedEx = exercises.find((e) => e.id === selectedExId)
-  const metricLabel = METRICS.find((m) => m.key === metric)?.label || ''
+  const metricLabel = metrics.find((m) => m.key === metric)?.label || ''
 
   const pr = prs[selectedExId]
   const maxVal = chartData.reduce((m, d) => Math.max(m, d[metric] || 0), 0)
@@ -213,7 +258,7 @@ export default function Progress() {
               onChange={(e) => setMetric(e.target.value)}
               className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-1.5 text-xs text-gray-300 focus:outline-none"
             >
-              {METRICS.map((m) => (
+              {metrics.map((m) => (
                 <option key={m.key} value={m.key}>{m.label}</option>
               ))}
             </select>

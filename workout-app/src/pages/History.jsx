@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
 import { Trash2, Pencil, ChevronDown, ChevronUp, Dumbbell, Clock, Layers, CloudUpload } from 'lucide-react'
 import { useWorkouts } from '../hooks/useWorkouts'
-import { CATEGORIES } from '../data/exercises'
+import { useSettings } from '../hooks/useSettings'
+import { CATEGORIES, exercises } from '../data/exercises'
 import ExerciseImage from '../components/ExerciseImage'
+import { milesToUnit } from '../utils/units'
 
-function WorkoutCard({ workout, onDelete, onEdit }) {
+function WorkoutCard({ workout, onDelete, onEdit, distanceUnit }) {
   const [expanded, setExpanded] = useState(false)
 
   const totalSets = workout.exercises.reduce((s, e) => s + e.sets.filter((st) => st.completed).length, 0)
@@ -107,6 +109,7 @@ function WorkoutCard({ workout, onDelete, onEdit }) {
         <div className="border-t border-gray-800 p-4 space-y-4">
           {workout.exercises.map((e, ei) => {
             const completedSets = e.sets.filter((s) => s.completed)
+            const ex = exercises.find((x) => x.id === e.exerciseId)
             return (
               <div key={ei} className="flex items-start gap-3">
                 <ExerciseImage category={e.category} size="sm" className="w-10 h-10 shrink-0" />
@@ -116,8 +119,12 @@ function WorkoutCard({ workout, onDelete, onEdit }) {
                     {completedSets.map((s, si) => (
                       <div key={si} className="flex items-center gap-2 text-xs">
                         <span className="w-5 text-gray-600 font-mono">{si + 1}</span>
-                        {s.time ? (
-                          <span className="text-gray-300">{s.time}s</span>
+                        {ex?.trackTime ? (
+                          <span className="text-gray-300">
+                            {s.time}s
+                            {ex.cardioMetric === 'distance' && s.distance ? ` · ${milesToUnit(s.distance, distanceUnit).toFixed(2)}${distanceUnit}` : ''}
+                            {ex.cardioMetric === 'count' && s.reps ? ` · ${s.reps} ${ex.countLabel.toLowerCase()}` : ''}
+                          </span>
                         ) : (
                           <span className="text-gray-300">{s.weight} lbs × {s.reps} reps</span>
                         )}
@@ -144,6 +151,7 @@ function WorkoutCard({ workout, onDelete, onEdit }) {
 
 export default function History() {
   const { workouts, loading, deleteWorkout } = useWorkouts()
+  const { settings } = useSettings()
   const navigate = useNavigate()
   const [filter, setFilter] = useState('all')
 
@@ -198,7 +206,7 @@ export default function History() {
       ) : (
         <div className="space-y-3">
           {filtered.map((w) => (
-            <WorkoutCard key={w.id} workout={w} onDelete={deleteWorkout} onEdit={(id) => navigate(`/log/edit/${id}`)} />
+            <WorkoutCard key={w.id} workout={w} onDelete={deleteWorkout} onEdit={(id) => navigate(`/log/edit/${id}`)} distanceUnit={settings.distanceUnit} />
           ))}
         </div>
       )}

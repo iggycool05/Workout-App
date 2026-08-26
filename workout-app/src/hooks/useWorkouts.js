@@ -37,6 +37,7 @@ const toWorkout = (row) => ({
           weight: s.weight,
           reps: s.reps,
           time: s.time_seconds,
+          distance: s.distance,
           completed: s.completed,
         })),
     })),
@@ -65,7 +66,7 @@ export function useWorkouts() {
           workout_exercises (
             id, exercise_id, exercise_name, category, sort_order,
             exercise_sets (
-              id, set_index, weight, reps, time_seconds, completed
+              id, set_index, weight, reps, time_seconds, distance, completed
             )
           )
         `)
@@ -124,6 +125,7 @@ export function useWorkouts() {
         weight: s.weight || null,
         reps: s.reps || null,
         time_seconds: s.time || null,
+        distance: s.distance || null,
         completed: s.completed,
       }))
       if (setsToInsert.length > 0) {
@@ -262,10 +264,12 @@ export function useWorkouts() {
         const totalReps = done.reduce((sum, s) => sum + (s.reps || 0), 0)
         const totalTime = done.reduce((sum, s) => sum + (s.time || 0), 0)
         const maxTime = done.reduce((m, s) => Math.max(m, s.time || 0), 0)
+        const totalDistance = done.reduce((sum, s) => sum + (s.distance || 0), 0)
+        const maxDistance = done.reduce((m, s) => Math.max(m, s.distance || 0), 0)
         const orm = maxWeight > 0 && done.length > 0
           ? Math.round(maxWeight * (1 + totalReps / (done.length * 30)))
           : 0
-        return { date: w.date, workoutId: w.id, maxWeight, totalVolume, totalReps, totalTime, maxTime, oneRepMax: orm, setsCount: done.length, sets: done }
+        return { date: w.date, workoutId: w.id, maxWeight, totalVolume, totalReps, totalTime, maxTime, totalDistance, maxDistance, oneRepMax: orm, setsCount: done.length, sets: done }
       })
       .sort((a, b) => new Date(a.date) - new Date(b.date))
 

@@ -1,11 +1,12 @@
 import { useSettings } from '../hooks/useSettings'
-import { Timer, RotateCcw, BellRing } from 'lucide-react'
+import { Timer, RotateCcw, BellRing, Route } from 'lucide-react'
 
 export default function Settings() {
   const { settings, updateSettings } = useSettings()
   const cd = settings.countdownSeconds
   const rest = settings.restSeconds
   const restEnabled = settings.restTimerEnabled
+  const distanceUnit = settings.distanceUnit
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -141,9 +142,39 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Distance unit */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-gray-800">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+            <Route size={15} className="text-cyan-400" />
+          </div>
+          <h2 className="text-sm font-semibold text-gray-200">Cardio Distance Unit</h2>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-gray-200">Units for distance-based cardio</p>
+            <p className="text-xs text-gray-500 mt-0.5">Used for treadmill, bike, and progress charts</p>
+          </div>
+          <div className="flex gap-1 p-1 bg-gray-800/60 border border-gray-800 rounded-lg shrink-0">
+            {['mi', 'km'].map((unit) => (
+              <button
+                key={unit}
+                onClick={() => updateSettings({ distanceUnit: unit })}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium uppercase transition-colors ${
+                  distanceUnit === unit ? 'bg-cyan-500/20 text-cyan-400' : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                {unit}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Reset */}
       <button
-        onClick={() => updateSettings({ countdownSeconds: 3, restTimerEnabled: true, restSeconds: 90 })}
+        onClick={() => updateSettings({ countdownSeconds: 3, restTimerEnabled: true, restSeconds: 90, distanceUnit: 'mi' })}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
       >
         <RotateCcw size={13} />
