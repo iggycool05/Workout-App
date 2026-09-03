@@ -7,6 +7,7 @@ import { useSettings } from '../hooks/useSettings'
 import { CATEGORIES, exercises } from '../data/exercises'
 import ExerciseImage from '../components/ExerciseImage'
 import { milesToUnit } from '../utils/units'
+import { formatDuration } from '../utils/time'
 
 function WorkoutCard({ workout, onDelete, onEdit, distanceUnit }) {
   const [expanded, setExpanded] = useState(false)
@@ -121,7 +122,7 @@ function WorkoutCard({ workout, onDelete, onEdit, distanceUnit }) {
                         <span className="w-5 text-gray-600 font-mono">{si + 1}</span>
                         {ex?.trackTime ? (
                           <span className="text-gray-300">
-                            {s.time}s
+                            {formatDuration(s.time)}
                             {ex.cardioMetric === 'distance' && s.distance ? ` · ${milesToUnit(s.distance, distanceUnit).toFixed(2)}${distanceUnit}` : ''}
                             {ex.cardioMetric === 'count' && s.reps ? ` · ${s.reps} ${ex.countLabel.toLowerCase()}` : ''}
                           </span>

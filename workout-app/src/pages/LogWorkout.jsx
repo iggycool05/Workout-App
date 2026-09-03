@@ -11,11 +11,10 @@ import { useExerciseNotes } from '../hooks/useExerciseNotes'
 import ExerciseImage from '../components/ExerciseImage'
 import ExerciseGroupPicker from '../components/ExerciseGroupPicker'
 import { milesToUnit, unitToMiles } from '../utils/units'
+import { formatDuration, formatTimerTime, splitSeconds } from '../utils/time'
 
 const DRAFT_KEY = 'fittrack-workout-draft'
 const WORKOUT_TIMER_KEY = 'fittrack-workout-duration-timer'
-
-const fmtTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
 
 const readWorkoutTimer = () => {
   try {
@@ -89,6 +88,43 @@ const requestNotifPermission = async () => {
 
 const postToSW = (msg) => navigator.serviceWorker?.controller?.postMessage(msg)
 
+function TimeFields({ value, onChange }) {
+  const time = splitSeconds(value)
+
+  const updatePart = (part, rawValue) => {
+    const next = { ...time, [part]: rawValue === '' ? 0 : Math.max(0, Number(rawValue) || 0) }
+    next.minutes = Math.min(59, next.minutes)
+    next.seconds = Math.min(59, next.seconds)
+    onChange((next.hours * 3600) + (next.minutes * 60) + next.seconds)
+  }
+
+  const fields = [
+    ['hours', 'h'],
+    ['minutes', 'm'],
+    ['seconds', 's'],
+  ]
+
+  return (
+    <div className="flex-1 grid grid-cols-3 gap-1 min-w-0">
+      {fields.map(([part, label]) => (
+        <label key={part} className="relative min-w-0">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={part === 'hours' ? undefined : 59}
+            placeholder="0"
+            value={time[part] || ''}
+            onChange={(e) => updatePart(part, e.target.value)}
+            className="w-full min-w-0 bg-gray-800 border border-gray-700 rounded-lg py-1.5 pl-2 pr-4 text-sm text-gray-200 text-right tabular-nums focus:outline-none focus:border-emerald-500/50"
+          />
+          <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">{label}</span>
+        </label>
+      ))}
+    </div>
+  )
+}
+
 function SetRow({ set, onChange, onDelete, ex, distanceUnit, countdownSeconds }) {
   const trackTime = ex.trackTime
   const cardioMetric = ex.cardioMetric
@@ -147,7 +183,7 @@ function SetRow({ set, onChange, onDelete, ex, distanceUnit, countdownSeconds })
             // Running: show live timer + pause + save
             <>
               <div className="flex-1 bg-gray-800 border border-emerald-500/40 rounded-lg px-3 py-1.5 font-mono text-sm text-emerald-400 text-center tabular-nums">
-                {fmtTime(timerElapsed)}
+                {formatTimerTime(timerElapsed)}
               </div>
               <button
                 onClick={pauseTimer}
@@ -166,7 +202,7 @@ function SetRow({ set, onChange, onDelete, ex, distanceUnit, countdownSeconds })
             // Paused: show frozen time + resume + save + reset
             <>
               <div className="flex-1 bg-gray-800 border border-amber-500/30 rounded-lg px-3 py-1.5 font-mono text-sm text-amber-400 text-center tabular-nums">
-                {fmtTime(timerElapsed)}
+                {formatTimerTime(timerElapsed)}
               </div>
               <button
                 onClick={startTimer}
@@ -190,15 +226,7 @@ function SetRow({ set, onChange, onDelete, ex, distanceUnit, countdownSeconds })
           ) : (
             // Idle: manual input + start button
             <>
-              <input
-                type="number"
-                inputMode="decimal"
-                placeholder="secs"
-                min={0}
-                value={set.time || ''}
-                onChange={(e) => onChange({ ...set, time: Number(e.target.value) })}
-                className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-emerald-500/50"
-              />
+              <TimeFields value={set.time} onChange={(time) => onChange({ ...set, time })} />
               <button
                 onClick={startTimer}
                 title="Start timer"
@@ -373,7 +401,7 @@ function ExerciseBlock({
               <p className="text-xs text-gray-400">
                 {lastSets.map((s) => {
                   if (!ex.trackTime) return `${s.weight}×${s.reps}`
-                  let str = `${s.time}s`
+                  let str = formatDuration(s.time)
                   if (ex.cardioMetric === 'distance' && s.distance) str += ` · ${milesToUnit(s.distance, distanceUnit).toFixed(2)}${distanceUnit}`
                   if (ex.cardioMetric === 'count' && s.reps) str += ` · ${s.reps} ${ex.countLabel.toLowerCase()}`
                   return str
@@ -395,7 +423,7 @@ function ExerciseBlock({
 
           <div className="flex items-center gap-1.5 mb-1 pl-5 text-xs text-gray-600 uppercase tracking-wide">
             {ex.trackTime ? (
-              <span className="flex-1">Time (sec)</span>
+              <span className="flex-1">Time</span>
             ) : (
               <>
                 <span className="flex-1">Weight</span>
@@ -825,7 +853,7 @@ export default function LogWorkout() {
             className="fixed bottom-24 lg:bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-blue-500/30 bg-gray-950/95 px-3 py-2 shadow-2xl backdrop-blur"
           >
             <BellRing size={15} className="text-blue-300" />
-            <span className="font-mono text-sm font-bold tabular-nums text-white">{fmtTime(activeRest.remaining)}</span>
+            <span className="font-mono text-sm font-bold tabular-nums text-white">{formatTimerTime(activeRest.remaining)}</span>
             <ChevronUp size={14} className="text-gray-500" />
           </button>
         ) : (
@@ -848,7 +876,7 @@ export default function LogWorkout() {
                 </p>
                 <p className="truncate text-sm text-gray-300">{activeRest.exerciseName}</p>
               </div>
-              <div className="text-2xl font-bold tabular-nums text-white">{fmtTime(activeRest.remaining)}</div>
+              <div className="text-2xl font-bold tabular-nums text-white">{formatTimerTime(activeRest.remaining)}</div>
             </div>
 
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-800">
